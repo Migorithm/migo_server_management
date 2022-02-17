@@ -1,0 +1,15 @@
+{% extends "errorbase.html" %}
+{% block title %}Vertica - Internal Error{% endblock %}
+{% block page_content %}
+<div class="jumbotron">
+    <h1>Unhandled Exception Occurred</h1>
+    <p>
+        Please contact any of the people listed below<br>
+        <ul class="list-group">
+            {% for admin in admins %}
+            <li class="list-group-item" style="color:gray">{{ admin }}</li>
+            {% endfor %}
+          </ul>
+    </p>
+</div>
+{% endblock %}
