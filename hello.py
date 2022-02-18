@@ -3,7 +3,7 @@ from flask_moment import Moment
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from wtforms import StringField,SubmitField
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired,Length
 import json,os
 from datetime import datetime 
 
@@ -13,11 +13,17 @@ bootstrap = Bootstrap(app)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 
 class NameForm(FlaskForm):
-    name = StringField("What's your name?", validators=[DataRequired()])
+    name = StringField("What's your name?", validators=[DataRequired(),Length(1,20)])
     submit= SubmitField("Submit")
+
+class SearchForm(FlaskForm):
+    searchbar = StringField("Search",validators=[DataRequired()])
+    submit=SubmitField("Search")
+
 
 @app.route('/',methods=["GET","POST"])
 def index():
+    search_form = SearchForm()
     form = NameForm()
     if form.validate_on_submit():
         old_name= session.get("name")
@@ -25,11 +31,12 @@ def index():
             flash("Name change has been detected!")
         session["name"]=form.name.data
         return redirect(url_for('index'))
-    return render_template("index.html",form=form,name=session.get("name",None))
+    return render_template("index.html",form=form,search_form=search_form,name=session.get("name",None))
 
 @app.route('/description')
 def description():
-    return render_template("description.html")
+    search_form = SearchForm()
+    return render_template("description.html",search_form=search_form)
 
 @app.errorhandler(404)
 def page_not_found(e):

@@ -9,8 +9,33 @@
     <p>
         Hoping that there will come a point where we can find out root cause of everything, now we decided that we need to muddle through in this period where there is no effective mechanism to prevent bad things from happening. And here comes Vertica Project.
     </p>
-        
+</div>
+{% endblock %}
 
-
+{% block content %}
+{{ super() }}
+<div class="container">
+    <h3>
+        Action items
+        <small class="text-muted">  - Whitelist</small>
+      </h3>
+<div class="row">
+    <div class="col-4">
+      <div class="list-group" id="list-tab" role="tablist">
+        <a class="list-group-item list-group-item-action active " id="item1-list" data-toggle="list" href="#item1" role="tab" aria-controls="home">Item1</a>
+        <a class="list-group-item list-group-item-action" id="item2-list" data-toggle="list" href="#item2" role="tab" aria-controls="profile">Item2</a>
+        <a class="list-group-item list-group-item-action" id="item3-list" data-toggle="list" href="#item3" role="tab" aria-controls="messages">Item3</a>
+        <a class="list-group-item list-group-item-action" id="item4-list" data-toggle="list" href="#item4" role="tab" aria-controls="settings">Item4</a>
+      </div>
+    </div>
+    <div class="col-8">
+      <div class="tab-content" id="nav-tabContent">
+        <div class="tab-pane fade show active" id="item1" role="tabpanel" aria-labelledby="list-home-list">message1</div>
+        <div class="tab-pane fade" id="item2" role="tabpanel" aria-labelledby="list-profile-list">message2</div>
+        <div class="tab-pane fade" id="item3" role="tabpanel" aria-labelledby="list-messages-list">message3</div>
+        <div class="tab-pane fade" id="item4" role="tabpanel" aria-labelledby="list-settings-list">message4</div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
