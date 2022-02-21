@@ -10,8 +10,11 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail, Message
 from threading import Thread
+from asgiref.wsgi import WsgiToAsgi
 
 app = Flask(__name__)
+asgi_app = WsgiToAsgi(app)
+
 moment= Moment(app)
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
@@ -25,6 +28,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = \
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate= Migrate(app,db)
+
 
 #mail
 app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER")
