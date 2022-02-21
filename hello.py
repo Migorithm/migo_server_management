@@ -8,6 +8,8 @@ import json,os
 from datetime import datetime 
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_mail import Mail, Message
+from threading import Thread
 
 app = Flask(__name__)
 moment= Moment(app)
@@ -22,8 +24,33 @@ app.config["SQLALCHEMY_DATABASE_URI"] = \
     "sqlite:///" + os.path.join(basedir,"data.sqlite")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
 migrate= Migrate(app,db)
+
+#mail
+app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER")
+app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+app.config['MAIL_SUBJECT_PREFIX'] = '[Vertica]'
+app.config['MAIL_SENDER'] = 'Vertica Admin <noreply@example.com>'
+mail = Mail(app)
+
+
+
+
+#mail service
+def send_async_email(app,msg):
+    with app.app_context:
+        mail.send(msg)
+
+def send_email(subject,template,**kwargs):
+    msg = Message(app.config["MAIL_SUBJECT_PREFIX"]+ subject,
+                  sender=app.config["MAIL_SENDER"],recipients=json.loads(os.environ.get("admins")))
+    msg.body = render_template(template+".txt", **kwargs)
+    msg.html = render_template(template+".html", **kwargs)
+    thr = Thread(target=send_async_email, args=[app,msg])
+    thr.start()
+    return thr
+
 
 
 #web forms 
@@ -127,4 +154,4 @@ def internal_server_error(e):
 
 @app.shell_context_processor
 def context_processor():
-    return dict(db=db,User=User,Operation=Operation)
+    return dict(db=db,User=User,Operation=Operation, mail=mail,Message=Message)
