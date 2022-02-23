@@ -297,7 +297,7 @@ You may also want to display "LogIn" or "Log Out" links depending on the logged-
 ```html
             <ul class="nav navbar-nav navbar-right">
                 {% if current_user.is_authenticated %} 
-                <!-- current_user variable is defined by Flask-login and it's 
+                <!-- current_user variable is defined by Flask-Login and it's 
                 automatically available to view functions and templates -->
 
                 <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
@@ -386,4 +386,48 @@ The following is the sequence of operations.<br>
 1. The user navigates to http://localhost:5000/auth/login by clicking on the "Log In" link. The handler for this URL returns the login form.
 
 2. User enters their credentials. 
-    - 2-1  Handler validates submitted credentials. 
+    - 2-1. Handler validates submitted credentials and then invokes ***login_user()*** function to log the user in. 
+    - 2-2. the ***login_user()*** function writes the ID of the user to the ***user session*** as a string. It's possible as you pass user object as an argument.
+    - 2-3. view function returns with a redirect to a different page.
+3. client(browser) receives redirects.
+    - 3-1. the view function of redirected endpoint is invoked, triggers rendering. 
+    - 3-2. during the rendering, a reference to Flask-Login's ***current_user*** is now possible. 
+    - 3-3. ***current_user*** context variable doesn't have value assigned for this request yet. So it invokes Flask-Login's internal function **_get_user()** to find out who the user is. 
+    - 3-4. **_get_user()** function essentially checks if user session has 'user ID'.
+        - If there isn't one, it returns an instance of Flask-Login's ***AnonymousUser***. 
+        - If there is, ***_get_user()*** invokes the function registered in ***app/models.py*** with ***@login_manager.user_loader*** decorator, with its ID as its argument.
+        - Note that here the ***ID is primary ID of the user object.***
+    - 3-5. ***load_user(user_id)*** handler reads the user from the database and returns it. Flask-Login assigns it to the current_user context variable for the current request. 
+    - 3-6. The template receives the newly assigned value of current_user.
+<br>
+
+The **@login_required** decorator builds on top of the current_user context variable<br>
+by allowing only the decorated view function to run when the expression,<br> 
+***current_user.is_authenticated*** is set to True.<br><br>
+
+***NOTE*** - You can't see the logic about how "@login_required" checks the current_user's authentication status as **@login_required** must have been implemented using current_user variable which is made available by Flask-Login even in view function.<br>
+
+
+### Testing Logins
+*app/templates/index.html*:
+```html
+Hello,
+{% if current_user.is_authenticated %}
+    {{ current_user }}
+{% else %}
+    Stranger
+{% endif %}!
+```
+<br>
+Now, because no user registration functionality has been built, a new user can only be registered from the shell at this time.: <br>
+```sh
+$ flask shell
+>>> u = User(email="example@example.com", username="Ko",password = "cat")
+>>> db.session.add(u)
+>>> db.session.commit()
+```
+
+
+
+
+
