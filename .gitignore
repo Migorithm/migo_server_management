@@ -1,2 +1,4 @@
 .flaskenv
 __pycache__
+venv
+*.sqlite

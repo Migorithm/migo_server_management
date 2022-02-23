@@ -108,8 +108,10 @@ it is necessary to run the application under different configuration settings.<b
 
 The solution to this problem is to ***delay the creation of the applcation***<br>
 by moving it into a ***factory function*** that can be explictly invoked from the script.<br>
-The application factory function is defined in the ***app** package constructor(\_\_init\_\_.py): 
+The application factory function is defined in the ***app** package constructor(\_\_init\_\_.py): <br>
+<br>
 
+*app/\_\_init\_\_.py
 ```python
 from flask import Flask
 from flask_bootstrap import Bootstrap
@@ -261,7 +263,13 @@ The namespace is the name passed as first argument to Blueprint constructor, and
 
 Using just ***".index"*** is shorter format for endpoints. This essentially means, redirects WITHIN the same blueprint can use the shorter form, while redirects that go for other blueprint(namespace) require fully qualified endpoint name, such as "second_blueprint.index".<br><br>
 
-To complete the changes, form objects are also stored inside the blueprint in the *app/main/forms.py*:
+To complete the changes, the following are also needed to be completed
+- forms.py (*app/main/forms.py*)
+- email.py (*app/email.py*)
+- models.py (*app/models.py*)
+<br>
+
+***app/main/forms.py***:
 ```python
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
@@ -271,6 +279,152 @@ class NameForm(FlaskForm):
     name = StringField('What is your name?', validators=[DataRequired()])
     submit = SubmitField('Submit')
 ```
+<br>
 
+***app/email.py***
+```python
+from threading import Thread
+from flask import current_app, render_template
+from flask_mail import Message
+from . import mail
+
+
+def send_async_email(app, msg):
+    with app.app_context():
+        mail.send(msg)
+
+
+def send_email(to, subject, template, **kwargs):
+    app = current_app._get_current_object()
+    msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + ' ' + subject,
+                  sender=app.config['FLASKY_MAIL_SENDER'], recipients=[to])
+    msg.body = render_template(template + '.txt', **kwargs)
+    msg.html = render_template(template + '.html', **kwargs)
+    thr = Thread(target=send_async_email, args=[app, msg])
+    thr.start()
+    return thr
+```
+
+
+***app/models.py***
+```python
+from . import db
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+    def __repr__(self):
+        return '<User %r>' % self.username
+```
+
+
+
+### Application Script
+***project_name.py*** is where application instance is really defined(Don't get confused by so many \_\_init\_\_.py under app/ and app/main.)<br><br>
+
+*project_name.py*:
+```python
+import os
+from app import create_app, db   #application factory and db
+from app.models import User,Role 
+from flask_migrate import Migrate
+
+app = create_app(os.getenv("FLASK_CONFIG") or 'default')
+migrate = Migrate(app,db)
+
+@app.shell_context_processor
+def make_shell_context():
+    return dict(db=db, User=User, Role=Role)
+
+```
+The configuration is taken from environment variable "FLASK_CONFIG" if it was defined, or else "default" which in this case will be mapped to DevelopmentConfig instance.<br><br>
+
+Because main script of the application changed from hello.py to project_name.py, value of FLASK_APP must be changed accordingly.<br><br>
+
+### Unit Tests
+As yet, this application is quite small; therefore there isn't a lot to test. But as an example, two simple tests can be defined, as shown below:<br><Br>
+
+*tests/test_basics.py*:
+```python
+import unittest
+from flask import current_app
+from app import create_app, db
+
+
+class BasicTestCase(unittest.TestCase):
+    def setUp(self): #For every test, it will proceed
+        self.app = create_app('testing')
+
+        #Activation of app context
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+        #create db in memory(path not defined)
+        db.create_all()
+
+    def tearDown(self): # For every test, this will follow.
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_app_exists(self):
+        self.assertFalse(current_app is None)
+
+    def test_app_is_testing(self):
+        self.assertTrue(current_app.config['TESTING'])
+```
+setUp() and tearDown() methods of the test case class run before and after each test.<br>
+Any methods that have a name that begins with ***test_*** are executed as tests.<br>
+***setUp*** method is to create an environment that is as close to that of running application.<br>
+***app.config['TESTING']*** and ***app.config['DEBUG']*** are set to False and become True <br>
+only when appropriate config subclass is chosen. <br><br>
+
+To make ***tests/*** directoryu a proper package, a ***tests/\_\_init\_\_.py*** module needs to be added even if it's empty.<br><br>
+
+To run the unit tests, a custom command can be added to the ***project_name.py***:
+```python
+@app.cli.command()
+def test(test_names=None):
+    """Run the unit tests."""
+    import unittest
+    if test_names:
+        tests = unittest.TestLoader().loadTestsFromNames(test_names)
+    else:
+        tests = unittest.TestLoader().discover('tests')
+    unittest.TextTestRunner(verbosity=2).run(tests)
+```
+
+The app.cli command decorator makes it simple to implement custom commands. The ***name of decorated function is used as command name (test in this example)***. And the function's docstring is displayed in the help messages. The implementations of the test() function invokes the test runner from the unittest package. <br><br>
+
+This unit tests can be executed as follows:
+```sh
+$ flask test
+test_app_exists  .... ok
+test_app_is_esting .... ok
+```
+
+
+### Database Setup
+The database URL is taken from an environment variable as a first choice.<br>
+For example, in development configuration, the URL is obtained from DEV_DATABASE_URL.<br><br>
+
+Regardless of the source of the database URL, the database tables must be created for the new database.<br> 
+When working with Flask-Migrate to keep track of migrations, database tables can be created or upgraded<br> 
+to the latest revision with a single command: 
+```sh
+flask db upgrade
+```
 
 
