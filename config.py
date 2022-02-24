@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 import json
 
@@ -16,6 +17,9 @@ class Config:
 
     #DB
     SQLALCHEMY_TRACK_MODIFICATIONS=False 
+
+    #session management
+    #PERMANENT_SESSION_LIFETIME=timedelta(minutes=1)
 
     @staticmethod
     def init_app(app):

@@ -15,11 +15,11 @@ def make_shell_context():
 
 
 @app.cli.command()
-def test(test_names=None):
+def unittest(test_names=None):
     """ Run the unit tests"""
     import unittest
     if test_names:
         tests = unittest.TestLoader().loadTestsFromNames(test_names)
     else:
-        tests = unittest.TestLoader().discover("tests")
+        tests = unittest.TestLoader().discover("unittests")
     unittest.TextTestRunner(verbosity=2).run(tests)

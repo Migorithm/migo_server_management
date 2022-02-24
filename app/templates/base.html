@@ -38,13 +38,20 @@
                 <li class="nav-item">
                   <a class="nav-link disabled" href="#">Disabled</a>
                 </li>
+                {% if current_user.is_authenticated %}
+                <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('auth.logout') }}">Log Out</a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('auth.login') }}">Log In</a>
+                </li>
+                {% endif %}
+        
               </ul>
               
               <form class="form-inline my-2 my-lg-0" method="POST">
               {% block search %}
-              {{ search_form.hidden_tag() }}
-              {{ search_form.searchword(class="form-control mr-sm-2",placeholder="Activity Search") }}
-              {{ search_form.submit_search(class="btn btn-outline-success my-2 my-sm-0")}}
               {% endblock %}
               </form>
               
@@ -62,6 +69,11 @@
             {% block page_content %}{% endblock %}
         </div>
         {% endblock %}
+        
+      <div class="container">
+        {% block footer %}
+        {% endblock %}
+      </div>
         {% block scripts %}
         {{ moment.include_moment() }}
         {% endblock %}

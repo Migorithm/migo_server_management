@@ -419,7 +419,9 @@ Hello,
 {% endif %}!
 ```
 <br>
-Now, because no user registration functionality has been built, a new user can only be registered from the shell at this time.: <br>
+
+Now, because NO user registration functionality has been built, a new user can only be registered from the shell at this time.: <br>
+
 ```sh
 $ flask shell
 >>> u = User(email="example@example.com", username="Ko",password = "cat")
@@ -427,7 +429,339 @@ $ flask shell
 >>> db.session.commit()
 ```
 
+### New User Registration
+#### Adding a User registration Form 
+***app/auth/forms.py***
+```python
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField,SubmitField
+from wtforms.validators import DataRequired, Length, Email, Regexp, EqualTo
+from twforms import ValidationError
+from ..models import User
+
+class RegistrationForm(FlaskForm):
+    email=StringField("Email",validators=[
+        DataRequired(),
+        Length(1,64),
+        Email()])
+    username=StringField("Username",validators=[
+        DataRequired(),
+        Length(1,64),
+        Regexp(r'^[a-zA-Z][A-Za-z0-9_.]*$',
+                flags=0,
+                message="Usernames must have only letters, numbers, dots or underscores")
+        ]
+        )
+    password=PasswordField("Password",validators=[
+        DataRequired(),
+        EqualTo("password2",
+                message="Password must match") 
+                ])
+    password2=PasswordField("Confirm password",validators=[DataRequired()])
+
+    def validate_email(self,field):
+        if User.query.filter_by(email=field.data).first():
+            raise ValidationError("Email already registered.")
+    def validate_username(self,field):
+        if User.query.filter_by(username=field.data).first():
+            raise ValidationError("Username already in use")
+```
+<br>
+
+This form uses the ***Regexp()*** validator, arguments of which are pattern, flags(re.IGNORECASE, for example) and Error message to raise.<br><br>
+
+The password is entered twice as a safety measure. Validating two password fields are same is done with ***EqualTo()*** validator.<br><br>
+
+In addition to validators provided by *wtfform.validators*, here we have two custom validators implemented as methods. When inheriting ***FlaskForm***, if the subclass defines a method with: the prefix "***validate_*** and field name", the method is invoked in addition to regularly defined validators. So in this case, when ***email*** field is validated, this custom validator is also applied.  <br><br>
+
+#### Adding templates
+
+The template that presents this form is called /templates/auth/register.html:
+```html
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Flasky - Register{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Register</h1>
+</div>
+<div class="col-md-4">
+    {{ wtf.quick_form(form) }}
+</div>
+{% endblock %}
+```
+<br>
+
+The registration page needs to be linked from the login page so that users who don't have an account can easily find it:
+```html
+<p>
+    New User?
+    <a href="{{ url_for('auth.register') }}">
+        Click here to register
+    </a>
+</p>
+```
+
+#### View functions for User registration
+The view function that performs registering user to database is shown below:<br>
+
+***app/auth/views.py***
+```python
+from .forms import RegistrationForm
+from ..models import User
+@auth.route('/register',methods=["GET","POST"])
+def register():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(email= form.email.data,
+                    username= form.username.data,
+                    password= form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash("You can now login")
+        return redirect(url_for('auth.login'))
+    return render_template('auth/register.html',form=form)
+```
+
+### Account Confirmation
+For certain applications, it is important to ensure user information provided during registration is valid. <br><br>
+
+To validate the email address, applications send a confirmation email to users immediately after they register. The new account is initially marked as unconfirmed. The account confirmation procedure typically involves clicking a specially crafted UTL link hat includes a confirmation token. <br>
+
+#### Generating Confirmation Tokens with 'itsdangerous' 
+The simplest account confirmation link would be a URL with the format ***http://www.example.com/auth.confirm/< id >***. So when the user clicks the link, the view function that handles this route receives the user id to confirm as an argument and can easily update the 'confirmed' status of the user. <br><br>
+
+But that is obviously not secure implementation. The better idea would be replacing < id > part in the ***URL with a token that only server can generate***.<br><br>
+
+Flask uses cryptographically signed cookies to protect the content of user sessions against tampering. The user session cookies contain cryptographic signature generated by a package called "itsdangerous". <br><br>
+
+If the contents of the user session is altered, the signature will not match the content anymroe. Flask then discards the session and start the new one. The same concopt can be applied to confirmation tokens. <br><br>
+
+*Shell session to show how itsdangerous can generate a signed token*:
+```python
+$ flask shell
+>>> from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+>>> s = Serializer(app.config["SECRET_KEY"],expires_in=3600)
+>>> token = s.dumps({"confirm":23})
+>>> token 
+'eyJhbGciOiJIUzI1NiIsImV4cCI6MTM4MTcxODU1OCwiaWF0IjoxMzgxNzE0OTU4fQ.ey ....'
+>>> data= s.loads(token)
+>>> data
+{'confirm': 23}
+```
+While itsdangerous package contain several types of token generators, we will use the class TimedJSONWebSignatureSerializer that generates JSON Web Signatures(JWSs) with a time expiration. This class takes encryption key which in a Flask application can be configured with SECRET_KEY.<br><br>
+
+***dumps()*** method generates a cryptographic signature for the data. To decode the token, ***loads()*** that the token as argument. The function verifies the signature and the expiration time. If and only if both are valid, it returns the original data, or else exception is raised. <br><br>
+
+Token generation and verification can be added to User model: <br>
+*app/models.py*:
+```python
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from flask import current_app
+from . import db
+
+class User(UserMixin,db.Model):
+    confirmed=db.Column(db.Boolean, default=False)
+
+    def generate_confirmation_token(self,expiration=300):
+        s = Serializer(current_app.config["SECRET_KEY"],expiration)
+        return s.dumps({'confirm':self.id}).decode('utf-8') #token
+    
+    def confirm(self,token):
+        s = Serializer(current_app.config["SECRET_KEY"])
+        try :
+            data = s.loads(token.encode('utf-8'))
+        except:
+            return False
+        if data.get("confirm") != self.id:
+            return False
+        self.confirm=True
+        db.session.add(self)
+        return True
+```
+Hoo! ***generate_confirmation_token()*** method generates a token with a default validity time of 5 minutes. <br><br>
+
+The ***confirm()*** method verifies the token and, if valid, sets the new confirmed attribute in the user instance to True. Plus, it check if the id from the token matches the logged-in user's id. <br><br>
 
 
+#### Test User model in the unittest
+tests/token_test.py
+```python
+import unittest
+from app.model import User
+import time
+from app import create_app,db
 
+class UserModelTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app('test')
+        self.app_context=self.app.app_context()
+        self.app_context.push()
+        db.create_all()
 
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_valid_confirmation_token(self):
+        u = User(password='cat')
+        db.session.add(u)
+        db.session.commit.()
+        token = u.generate_confirmation_token()
+        self.assertTrue(u.confirm(token))
+    
+    def test_invalid_confirmation_token(self):
+        u1 = User(password="cat")
+        u2 = User(password="dog")
+        db.session.add_all([u1,u2])
+        db.session.commit()
+        token = u1.generate_confirmation_token()
+        self.assertFalse(u2.confirm(token))
+
+    def test_expired_confirmation_token(self):
+        u = User(password='tiger')
+        db.session.add(u)
+        db.session.commit()
+        token = u.generate_confirmation_token(1)
+        time.sleep(2)
+        self.assertFalse(u.confirm(token))
+```
+
+#### Sending Confirmation Emails
+The current */register* route directs to /index after adding the new user to the database. But, before redirecting, this route now needs to send the confirmation email as follows:<br><br>
+
+*app/auth/views.py*:
+```python
+from ..email import send_email
+@auth.route('/register', methods=["GET","POST"])
+def register():
+    form =RegistrationFrom()
+    if form.validate_on_submit():
+        ...
+        db.session.add(user)
+        db.session.commit()
+        token = user.generate_confirmation_token()
+        send_email(user.email,"Confirm Your Account", "auth/email/confirm", user=user, token=token)
+        flash("A confirmation email has been sent to you by email")
+        return redirect(url_for("main.index"))
+    return render_template("auth/register.html",form=form)
+```
+As 'id' field is required to generate confirmation token, db.session.commit() must be called first.<br><br>
+
+The email templates used by the authentication blueprint will be added in the templates/auth/email directory to keep them separate from the HTML templates. For each email, two templates are needed for the plain-text and HTML versions of the body: <br><br>
+
+*app/templates/auth/email/confirm.txt*
+```html
+Dear {{ user.username }},
+
+Welcome to Vertica Project!
+
+To confirm your account please click on the following link:
+
+{{ url_for('auth.confirm', token=token,_external=True)}}
+
+Sincerly,
+
+Vertial Data Management Team - Migo
+
+Note: replies to this email address are not monitored.
+```
+<br>
+
+By default, url_for() generates relative URLs, such as '/auth/confirm/< token >'. Within the context of webpage, it works fine but when sending URL over email there is no such context. You need to specify pull path by setting ***_external*** to True. <br><br>
+
+The view function that confirms the accounts is shown below.<br>
+*app/auth/view.py*
+```python
+from flask_login import current_user
+
+@auth.route("/confirm/<token>")
+@login_required
+def confirm(token):
+    if current_user.confirmed: #In case they're already confirmed
+        return redirect(url_for('main.index'))
+    if current_user.confirm(token): 
+        db.session.commit() #remember, we left off at db.session.add()
+        flash("You have confirmed your account!")
+    else:
+        flash("The confirmation link is invlid or has expired")
+    return redirect(url_for("main.index"))
+```
+This route is protected with ***@login_required.***<br><br>
+
+The function first checks if the logged-in user is already confirmed.<br><br>
+
+Because actual token confirmation is done entirely in the User model, all the view function has to do is call the ***confirm()*** method and then flash the message. If the function returns True, it means the function have checked the token and changed confirm attribute of user instance to True and added them. So to finalize it, you need to do db.session.commit() <br><br>
+
+Each application can decide what unconfirmed users are allowed to do before they confirm their accounts. This step can be done using Flask's ***before_request*** hook. <br><br>
+
+From a blueprint, the ***before_request*** hook applies only to requests that belong to the blueprint. To install a blueprint hook for all application request, ***before_app_request*** must be used instead. The following example shows how this handler is implemented:<br><br>
+
+*app/auth/views.py*
+```python
+@auth.before_app_request
+def before_request():
+    if current_user.is_authenticated \
+        and not current_user.confirmed \
+        and request.blueprint != 'auth' \
+        and request.endpoint != 'statc' :
+        return redirect(url_for('auth.unconfirmed'))
+
+@auth.route('/unconfirmed')
+def unconfirmed():
+    if current_user.is_anynomous or current_user.confirmed:
+        return redirect(url_for('main.index'))
+    return render_template('auth/unconfirmed.html')
+```
+
+The before_app_request handler will intercept a request when three conditions are true: 
+- A user is logged in(current_user.is_authenticated)
+- The account is not confirmed
+- The requested URL is outside of authentication blueprint and is not for static file.
+    - Access to the authentication routes needs to be granted, as those are the routes that will enable the user to confirm the account. 
+<br><br>
+
+The page that is presented to unconfirmed users just renders a template that gives users instructions for how to confirm their accounts and offers a link to request a new confirmation email. <br><br>
+
+*app/templates/auth/unconfirmed.html:
+```html
+{% extends "base.html" %}
+
+{% block title %}Confirm your account{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>
+        Hello, {{ current_user.username }}!
+    </h1>
+    <h3>You have not confirmed your account yet.</h3>
+    <p>
+        Before you can access this site you need to confirm your account.
+        Check your inbox, you should have received an email with a confirmation link.
+    </p>
+    <p>
+        Need another confirmation email?
+        <a href="{{ url_for('auth.resend_confirmation') }}">Click here</a>
+    </p>
+</div>
+{% endblock %}
+```
+<br>
+
+*app/auth/views.py*:
+```python
+from flask_login import current_user
+
+@auth.route('/confirm')
+@login_required
+def resend_confirmation():
+    token=current_user.generate_confirmation_token()
+    send_email(current_user.email,"Confirm Your Account", 'auth/email/confirm', user=current_user,token=token)
+    flash('A new confimration email has been sent to you by email.')
+    return redirect(url_for('main.index'))
+```
+
+This route repeats what was done in the ***"registration"*** route (not confirm/< token >) using current_user, the user who's logged in as the target user. 

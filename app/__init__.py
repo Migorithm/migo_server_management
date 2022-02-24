@@ -1,3 +1,4 @@
+from datetime import timedelta
 from flask import Flask
 from flask_moment import Moment
 from flask_bootstrap import Bootstrap
@@ -12,6 +13,7 @@ moment = Moment()
 db = SQLAlchemy()
 login_manager=LoginManager()
 login_manager.login_view="auth.login" #sets the endpoint for login page
+login_manager.remember_cookie_duration = timedelta(minutes=30) #session management
 
 #Factory
 def create_app(config_name):

@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+{% block title %}Vertica Management - Registration{% endblock %}
+{% block page_content %}
+<div class="page-header">
+    <h3 style="color: rgb(162, 146, 146);">Vertica Project Registration Form</h3>
+</div>
+<div class="col-md-6">
+{{ wtf.quick_form(form) }}
+</div>
+{% endblock %}
+

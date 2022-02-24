@@ -2,8 +2,13 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% block page_content %}
 <div class="page-header">
-    <h1>Hello, {% if name %}{{name}}{% else %}Stranger{% endif %}!</h1>
+    <h1>Hello, {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Stranger{% endif %}!</h1>
 </div>
 {{ wtf.quick_form(form) }}
 {% endblock %}
 
+{% block search %}
+{{ search_form.hidden_tag() }}
+{{ search_form.searchword(class="form-control mr-sm-2",placeholder="Activity Search") }}
+{{ search_form.submit_search(class="btn btn-outline-success my-2 my-sm-0")}}
+{% endblock %}
