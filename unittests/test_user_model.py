@@ -1,5 +1,5 @@
 import unittest
-from app.models import User
+from app.models import User,AnonymousUser,Permission,Role
 from app import create_app,db
 import time 
 
@@ -9,6 +9,9 @@ class UserModelTestCase(unittest.TestCase):
         self.app_context = self.app.app_context()
         self.app_context.push()
         db.create_all()
+
+        #You have to assign roles
+        Role.insert_roles()
 
     def tearDown(self):
         db.session.remove()
@@ -56,3 +59,23 @@ class UserModelTestCase(unittest.TestCase):
         token = u.generate_confirmation_token(1)
         time.sleep(2)
         self.assertFalse(u.confirm(token))
+
+    def test_user_role(self):
+        u = User(email ="john@wemakeprice.com", password="cat") #assign default role
+        #self.assertTrue(u.can(Permission.READ))
+        self.assertFalse(u.can(Permission.WRITE))
+        self.assertFalse(u.can(Permission.EXECUTE))
+        self.assertFalse(u.can(Permission.ADMIN))
+    
+    def test_anonymous_user(self):
+        u = AnonymousUser()
+        self.assertFalse(u.can(Permission.READ))
+        self.assertFalse(u.can(Permission.WRITE))
+        self.assertFalse(u.can(Permission.EXECUTE))
+        self.assertFalse(u.can(Permission.ADMIN))
+    def test_admin_role(self):
+        u = User(email ="migo@wemakeprice.com", password="cat") 
+        self.assertTrue(u.can(Permission.READ))
+        self.assertTrue(u.can(Permission.WRITE))
+        self.assertTrue(u.can(Permission.EXECUTE))
+        self.assertTrue(u.can(Permission.ADMIN))

@@ -1,21 +1,38 @@
 from werkzeug.security import generate_password_hash,check_password_hash
-from flask_login import UserMixin
+from flask_login import UserMixin,AnonymousUserMixin
 from . import db, login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
-
+from enum import IntEnum
+import json
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     username = db.Column(db.String(10),index=True)
     id = db.Column(db.Integer, primary_key=True)
     operations = db.relationship("Operation", backref="user",lazy="dynamic")
- 
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     email = db.Column(db.String(64),unique=True,index=True)
     password_hash = db.Column(db.String(128))
 
     #confirmed status
     confirmed = db.Column(db.Boolean, default=False)
+
+
+    #role assignment
+    def __init__(self,**kwargs):
+        super(User,self).__init__(**kwargs)
+        if self.role is None:
+            if self.email in current_app.config["ADMINS"]:
+                self.role = Role.query.filter_by(name="Admin").first()
+            if self.role is None:
+                self.role = Role.query.filter_by(default=True).first()
+    
+    def can(self,perm):
+        return self.role is not None and self.role.has_permission(perm)
+    def is_administrator(self):
+        return self.can(Permission.ADMIN)
+    # ---------------------
 
     def __repr__(self):
         return "<User %r>" % self.username
@@ -47,6 +64,12 @@ class User(UserMixin, db.Model):
         db.session.add(self)
         return True
 
+class AnonymousUser(AnonymousUserMixin):
+    def can(self,permissions):
+        return False
+    def is_administrator(self):
+        return False
+
 
 class Operation(db.Model):
     __tablename__ = "operations"
@@ -62,3 +85,64 @@ class Operation(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+login_manager.anonymous_user=AnonymousUser
+
+
+class Permission(IntEnum):
+    READ =1
+    WRITE= 2
+    EXECUTE =4 
+    ADMIN = 8
+
+
+class Role(db.Model):
+    __tablename__ = "roles"
+    id = db.Column(db.Integer,primary_key=True)
+    name = db.Column(db.String(64),unique=True)
+    default = db.Column(db.Boolean,default=False,index=True)
+    permissions = db.Column(db.Integer)
+    
+    # One user will have one role while one role will have
+    # A lot of users
+    users = db.relationship("User",backref="role",lazy="dynamic")
+    def __init__(self,**kwagrs):
+        super(Role,self).__init__(**kwagrs)
+        if self.permissions is None:
+            self.permissions=0
+    
+    def __repr__(self):
+        return "<Role {}>".format(self.name)
+
+    def has_permission(self,perm):
+        return self.permissions & perm == perm
+
+    def add_permission(self,perm):
+        if not self.has_permission(perm):
+            self.permissions += perm
+    def remove_permission(self,perm):
+        if self.has_permission(perm):
+            self.permissions -= perm
+    def reset_permissions(self):
+        self.permissions=0
+
+    @staticmethod
+    def insert_roles():
+        roles = {
+            "User":[Permission.READ],
+            "Admin":[PERMISSION for PERMISSION in Permission]
+        }
+        default_role="User"
+        for r in roles.keys():
+            role = Role.query.filter_by(name=r).first()
+            
+            #if role has yet been registered,
+            if role is None:
+                role = Role(name=r)
+            role.reset_permissions()
+            for perm in roles[r]:
+                role.add_permission(perm)
+            
+            #To set role's default
+            role.default = (role.name == default_role)
+            db.session.add(role)
+        db.session.commit()

@@ -3,10 +3,11 @@ from . import main
 from .. import models
 from flask import render_template,session,redirect,url_for,current_app, flash, abort
 from .. import db
-from ..models import User
+from ..models import Permission, User
 from ..email import send_email
 from .forms import NameForm,SearchForm
 from flask_login import login_required
+from app.decorators import admin_required,permission_required
 
 
 
@@ -52,6 +53,7 @@ def user_activity():
 
 @main.route('/description',methods=["GET","POST"])
 @login_required
+@permission_required(Permission.READ)
 def description():
     search_form = SearchForm()
     if activity(search_form):
