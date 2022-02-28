@@ -38,6 +38,24 @@
                 <li class="nav-item">
                   <a class="nav-link disabled" href="#">Disabled</a>
                 </li>
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="account" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Account
+                  </a>
+                  <div class="dropdown-menu" aria-labelledby="account">
+                    {% if current_user.is_authenticated %}
+                    <a class="dropdown-item" href="{{ url_for('main.user',username=current_user.username)}}">Profile</a>
+                    {% endif %}
+                    {% if not current_user.is_administrator() %}
+                    <a class="dropdown-item" href="{{ url_for('main.edit_profile')}}">Edit Profile</a>
+                    {% endif %}
+                    {% if current_user.is_administrator() %}
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="{{ url_for('main.edit_profile_admin') }}">Edit Admin Profile</a>
+                    {% endif %}
+                  </div>
+                </li>
+
                 {% if current_user.is_authenticated %}
                 <li class="nav-item">
                   <a class="nav-link" href="{{ url_for('auth.logout') }}">Log Out</a>

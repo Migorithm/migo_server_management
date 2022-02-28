@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}Vertica - Edit Profile{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    {% if search %}
+    <h4>Search User Profile</h4>
+    <form class="form-inline my-2 my-lg-0" method="POST">
+    {{ search.hidden_tag() }}
+    {{ search.searchword(class="form-control mr-sm-2",placeholder="Activity Search") }}
+    {{ search.submit_search(class="btn btn-outline-success my-2 my-sm-0")}}
+    </form>
+    {% endif %}
+    <br><br> 
+    
+</div>
+{%if form %}
+<h4>Edit User Profile</h4>
+<div class="col-md-4">
+    <div class="container">
+
+    
+    </div>
+    <div class="container">
+    {{ wtf.quick_form(form) }}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

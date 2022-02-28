@@ -4,19 +4,31 @@ from . import db, login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
 from enum import IntEnum
+from datetime import datetime
 import json
+
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
-    username = db.Column(db.String(10),index=True)
+    username = db.Column(db.String(64),index=True)
     id = db.Column(db.Integer, primary_key=True)
     operations = db.relationship("Operation", backref="user",lazy="dynamic")
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
     email = db.Column(db.String(64),unique=True,index=True)
     password_hash = db.Column(db.String(128))
 
-    #confirmed status
+    location= db.Column(db.String(64))
+    about_me = db.Column(db.Text())
+    member_since = db.Column(db.DateTime(),default=datetime.utcnow)
+    last_seen = db.Column(db.DateTime(),default=datetime.utcnow)
+    
+      #confirmed status
     confirmed = db.Column(db.Boolean, default=False)
+
+    def ping(self):
+        self.last_seen = datetime.utcnow()
+        db.session.add(self)
+        db.session.commit()
 
 
     #role assignment
