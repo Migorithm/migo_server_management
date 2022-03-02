@@ -1,0 +1,11 @@
+<div class="list-group">
+    {% for op in ops %}
+    <a href="{{ url_for('.user', username=op.user.username) }}" class="list-group-item list-group-item-action flex-column align-items-start">
+      <div class="d-flex w-100 justify-content-between">
+        <h6 class="mb-1">{{ op.execution.name }}</h6>
+      </div>
+      <small class="mb-1">{{op.user.username}} {{ moment(op.timestamp).fromNow() }}</small>
+    </a>
+    <br>
+    {% endfor %}
+</div>

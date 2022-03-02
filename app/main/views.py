@@ -1,69 +1,42 @@
 from . import main
 from flask import render_template,session,redirect,url_for,current_app, flash, abort
 from .. import db
-from ..models import Permission, User,Role
-from .forms import EditProfileForm, NameForm,SearchForm,EditProfileAdminForm
+from ..models import Execution, Operation, Permission, User,Role
+from .forms import EditProfileForm, NameForm,SearchForm,EditProfileAdminForm,OperationForm
 from flask_login import login_required,current_user
 from app.decorators import admin_required,permission_required
 
 
 
 ##DRY
-def activity(search_form):
-    if search_form.submit_search.data and search_form.validate():
-        search_word = search_form.searchword.data
-        user = User.query.filter_by(username=search_word).first()
-        if not user:
-            abort(500)
-        else: 
-            operation = list(map(lambda x:x.operation, user.operations.all()))
-            session["name"]=search_word
-            session["operation"] = operation
-            return True
-            
 
 @main.route('/',methods=["GET","POST"])
 @login_required
 def index():
     form = NameForm()
-    search_form = SearchForm()
     if form.submit.data and form.validate():
         old_name= session.get("name")
         if old_name is not None and old_name != form.name.data:
             flash("Name change has been detected!")
         session["name"]=form.name.data
         return redirect(url_for('.index'))
-    
-    if activity(search_form):
-        return redirect(url_for('.user_activity'))
+    return render_template("index.html",form=form,name=session.get("name",None))
 
-    return render_template("index.html",form=form,search_form=search_form,name=session.get("name",None))
-
-@main.route("/user_activity",methods=["GET","POST"])
-@login_required
-def user_activity():
-    search_form = SearchForm()
-    if activity(search_form):
-        return redirect(url_for('.user_activity'))
-    return render_template("user_activity.html",name=session.get("name"),operations=session.get("operation"),search_form=search_form)
 
 
 @main.route('/description',methods=["GET","POST"])
 @login_required
 @permission_required(Permission.READ)
-def description():
-    search_form = SearchForm()
-    if activity(search_form):
-        return redirect(url_for('.user_activity'))    
-    return render_template("description.html",search_form=search_form)
+def description():  
+    return render_template("description.html")
 
 
 #User profile page
 @main.route("/user/<username>")
 def user(username):
     user=User.query.filter_by(username=username).first_or_404()
-
-    return render_template("user.html",user=user)
+    ops = user.operations.order_by(Operation.timestamp.desc()).all()
+    return render_template("user.html",user=user,ops=ops)
 
 @main.route("/edit-profile",methods=["GET","POST"])
 @login_required
@@ -118,3 +91,28 @@ def edit_profile_admin_user(id):
     form.location.data = user.location
     form.about_me.data = user.about_me
     return render_template('edit_profile.html',search=search, form=form)
+
+@main.route('/operation',methods=["GET","POST"])
+@login_required
+@admin_required
+def operation():
+    form = OperationForm()
+    if current_user.can(Permission.EXECUTE) and form.validate_on_submit():
+        op = Operation(exec_id=form.execution.data,user=current_user._get_current_object())
+        db.session.add(op)
+        db.session.commit()
+        return redirect(url_for(".operation"))
+    #ops = Operation.query.order_by(Operation.timestamp.desc()).all()
+    return render_template("operation.html",form=form)
+
+@main.route("/operation/history")
+@login_required
+@admin_required
+def ops_history():
+    return render_template("operation_history.html")
+
+@main.route("/operation/table")
+@login_required
+@admin_required
+def ops_table():
+    return {"data":[op.to_dict() for op in Operation.query]}

@@ -1,7 +1,8 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField,SubmitField,TextAreaField,BooleanField,SelectField,ValidationError
 from wtforms.validators import DataRequired,Length,Email,Regexp
-from app.models import User,Role
+from app.models import User,Role,Execution
+from enum import Enum
 
 class NameForm(FlaskForm):
     name = StringField("What's your name?", validators=[DataRequired(),Length(1,20)])
@@ -15,7 +16,7 @@ class EditProfileForm(FlaskForm):
     location = StringField("Location", validators=[Length(0,64)])
     about_me = TextAreaField("About_Me")
     submit = SubmitField("Submit")
-    
+
     
 class EditProfileAdminForm(FlaskForm):
     email = StringField("Email",validators=[DataRequired(),Length(1,64),Email()])
@@ -46,3 +47,11 @@ class EditProfileAdminForm(FlaskForm):
             User.query.filter_by(username=field.data).first():
             raise ValidationError("Username already in use")
         
+
+class OperationForm(FlaskForm):
+    execution = SelectField("Execution",coerce=int)
+    submit =SubmitField("Go!")
+    
+    def __init__(self,*args,**kwargs):
+        super(OperationForm,self).__init__(*args,**kwargs)
+        self.execution.choices = [(exe.id,exe.name) for exe in Execution.query.order_by(Execution.name).all()]

@@ -3,7 +3,7 @@ from flask_login import UserMixin,AnonymousUserMixin
 from . import db, login_manager
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
-from enum import IntEnum
+from enum import Enum, IntEnum,auto
 from datetime import datetime
 import json
 
@@ -82,14 +82,53 @@ class AnonymousUser(AnonymousUserMixin):
     def is_administrator(self):
         return False
 
+#Operation part
+class Executable(Enum):
+    ROLLING_RESTART=auto()
+    FILE_TRANSER=auto()
 
+class Execution(db.Model):
+    __tablename__= "executions"
+    id= db.Column(db.Integer,primary_key=True)
+    name = db.Column(db.String(64),unique=True)
+    operations = db.relationship("Operation",backref="execution",lazy="dynamic")
+    
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+    def __repr__(self):
+        return "<Execution %r>" % self.name
+    
+    @staticmethod
+    def insert_execution():
+        for exe in Executable:
+            execution = Execution.query.filter_by(name=exe.name).first()
+            #if execution has yet been registered,
+            if execution is None:
+                execution = Execution(name=exe.name)
+            db.session.add(execution)
+        db.session.commit()        
+    
+    
 class Operation(db.Model):
     __tablename__ = "operations"
     id = db.Column(db.Integer,primary_key=True)
-    operation = db.Column(db.String(64),nullable=False,index=True)
+    timestamp= db.Column(db.DateTime,index=True,default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    exec_id = db.Column(db.Integer, db.ForeignKey("executions.id"))
+    #user
+    #exeuction
     def __repr__(self):
-        return "<Operation %r>" % self.operation
+        return "<Operation %r %r>" % self.user.username, self.execution.name
+    def to_dict(self):
+        return {
+            "id":self.id,
+            "timestamp":self.timestamp,
+            "user":self.user.username,
+            "execution":self.execution.name,
+            "email":self.user.email
+        }
+#----------------------------    
+    
     
 # To load "a" user, we need to define
 # User loading function 
@@ -158,3 +197,4 @@ class Role(db.Model):
             role.default = (role.name == default_role)
             db.session.add(role)
         db.session.commit()
+

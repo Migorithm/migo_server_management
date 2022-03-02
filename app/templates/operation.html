@@ -1,0 +1,20 @@
+{% extends "base.html" %} 
+{% import "bootstrap/wtf.html" as wtf %} 
+{% block title %}Vertica{% endblock %} 
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Hello, 
+        {% if current_user.is_authenticated %}{{ current_user.username }}
+        {% else %}Stranger{% endif %}!</h1>
+</div>
+<div>
+    {% if current_user.is_administrator() %}
+    <form class="form-inline my-2 my-lg-0" method="POST">
+        {{ form.hidden_tag() }} {{ form.execution(class="form-control mr-sm-2") }} {{ form.submit(class="btn btn-outline-success my-2 my-sm-0")}}
+    </form>
+    {% endif %}
+
+</div>
+
+{% endblock %}
