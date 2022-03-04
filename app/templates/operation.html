@@ -11,7 +11,9 @@
 <div>
     {% if current_user.is_administrator() %}
     <form class="form-inline my-2 my-lg-0" method="POST">
-        {{ form.hidden_tag() }} {{ form.execution(class="form-control mr-sm-2") }} {{ form.submit(class="btn btn-outline-success my-2 my-sm-0")}}
+        {{ form.hidden_tag() }} 
+        {{ form.execution(class="form-control mr-sm-2") }} 
+        {{ form.submit(class="btn btn-outline-success my-2 my-sm-0")}}
     </form>
     {% endif %}
 

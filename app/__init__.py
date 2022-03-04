@@ -6,11 +6,13 @@ from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from config import config
 from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
 
 bootstrap = Bootstrap()
 mail = Mail()
 moment = Moment()
 db = SQLAlchemy()
+csrf = CSRFProtect()
 login_manager=LoginManager()
 login_manager.login_view="auth.login" #sets the endpoint for login page
 login_manager.remember_cookie_duration = timedelta(minutes=30) #session management
@@ -31,6 +33,7 @@ def create_app(config_name):
     moment.init_app(app)
     db.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     #Blueprint
     from .main import main as main_blueprint

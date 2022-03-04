@@ -1,12 +1,12 @@
 from . import main
-from flask import render_template,session,redirect,url_for,current_app, flash, abort
+from flask import render_template,session,redirect,url_for,current_app, flash, abort,jsonify,request
 from .. import db
 from ..models import Execution, Operation, Permission, User,Role
 from .forms import EditProfileForm, NameForm,SearchForm,EditProfileAdminForm,OperationForm
 from flask_login import login_required,current_user
 from app.decorators import admin_required,permission_required
-
-
+from os import getenv
+import json
 
 ##DRY
 
@@ -91,6 +91,59 @@ def edit_profile_admin_user(id):
     form.location.data = user.location
     form.about_me.data = user.about_me
     return render_template('edit_profile.html',search=search, form=form)
+
+
+
+#--------------------Operation----------------------------
+
+@main.route('/steps',methods=["GET","POST"])
+def steps():
+    SOLUTION =json.loads(getenv("SOLUTION"))
+    #default
+    solutions = tuple(solutions.keys())
+
+    if request.method == "POST":
+        #second step  (When solution was selected)
+        clusters = SOLUTION.get(request.get_json().get('solution'))
+        if clusters:
+            clusters = tuple(clusters.key())
+        
+        #third step : list (When cluster was selected)
+        nodes = SOLUTION.get(request.get_json().get("solution")).get(request.get_json().get("cluster"))
+        if all((clusters,nodes)):
+            print("Selected cluster has following nodes: " +",".join(ip for ip in nodes))
+            return jsonify("",render_template("selection.html",nodes=nodes))
+        if clusters:
+            print("Selected solution has following clusters: " +",".join(cluster for cluster in clusters))
+            return jsonify("",render_template("selection.html",clusters=clusters))
+    return jsonify("",render_template("selection.html",solutions=solutions))
+        
+
+
+@main.route('/op',methods=["GET","POST"])
+def op():
+    if request.method=="POST":
+        pass
+    print("dd")
+    return render_template("op.html")
+
+@main.route('/practice',methods=["POST"])
+def whatever():
+    info = json.loads(getenv("SOLUTION"))
+    req= request.get_json()
+    
+    if req["req_client"] in info.keys(): 
+        print(info.keys())
+        session["solution"] = req["req_client"]
+        return jsonify({"result": tuple(info[req["req_client"]].keys()),"type":"cluster"})
+    if req["req_client"] in info[session["solution"]]:
+        session["cluster"] = req["req_client"]
+        print(info[session["solution"]][session["cluster"]])
+        return jsonify({"result":tuple(info[session["solution"]][session["cluster"]]),"type":"nodes"})
+    return 
+
+
+
 
 @main.route('/operation',methods=["GET","POST"])
 @login_required
