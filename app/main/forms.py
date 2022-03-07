@@ -4,6 +4,7 @@ from wtforms.validators import DataRequired,Length,Email,Regexp
 from app.models import User,Role,Execution
 from enum import Enum
 
+
 class NameForm(FlaskForm):
     name = StringField("What's your name?", validators=[DataRequired(),Length(1,20)])
     submit= SubmitField("Submit")
@@ -54,4 +55,4 @@ class OperationForm(FlaskForm):
     
     def __init__(self,*args,**kwargs):
         super(OperationForm,self).__init__(*args,**kwargs)
-        self.execution.choices = [(exe.id,exe.name) for exe in Execution.query.order_by(Execution.name).all()]
+        self.execution.choices = [(exe.id,exe.name) for exe in Execution.query.filter_by(solution=kwargs["solution"]).order_by(Execution.name).all()]

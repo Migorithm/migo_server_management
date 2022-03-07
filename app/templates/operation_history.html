@@ -9,8 +9,11 @@
             <th>ID</th>
             <th>USER</th>
             <th>EMAIL</th>
-            <th>TIMESTAMP</th>
             <th>EXECUTION</th>
+            <th>SOLUTION</th>
+            <th>CLUSTER</th>
+            <th>TIMESTAMP</th>
+       
         </tr>
     </thead>
     <tbody>
@@ -34,12 +37,21 @@
                 orderable: false,
                 searchable: false
             }, {
+                data: 'execution',
+                searchable: true
+            },{
+                data: 'solution',
+                orderable: true,
+                searchable: false
+            },{
+                data: 'cluster',
+                orderable: true,
+                searchable: false
+            },
+            {
                 data: 'timestamp',
                 orderable: true,
                 searchable: false
-            }, {
-                data: 'execution',
-                searchable: true
             }],
         });
     });

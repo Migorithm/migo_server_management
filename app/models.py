@@ -6,6 +6,7 @@ from flask import current_app
 from enum import Enum, IntEnum,auto
 from datetime import datetime
 import json
+from .execs import RedisDirector,ElasticDirector
 
 
 class User(UserMixin, db.Model):
@@ -90,8 +91,9 @@ class Executable(Enum):
 class Execution(db.Model):
     __tablename__= "executions"
     id= db.Column(db.Integer,primary_key=True)
-    name = db.Column(db.String(64),unique=True)
+    name = db.Column(db.String(64))
     operations = db.relationship("Operation",backref="execution",lazy="dynamic")
+    solution= db.Column(db.String(64))
     
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
@@ -100,14 +102,27 @@ class Execution(db.Model):
     
     @staticmethod
     def insert_execution():
-        for exe in Executable:
-            execution = Execution.query.filter_by(name=exe.name).first()
-            #if execution has yet been registered,
-            if execution is None:
-                execution = Execution(name=exe.name)
-            db.session.add(execution)
-        db.session.commit()        
-    
+        REDIS= RedisDirector.construct() #dict - solution, execution
+        ELASTIC = ElasticDirector.construct() #dict 
+        SOLUTIONS=[REDIS,ELASTIC]
+        for sol in SOLUTIONS:
+            for exe in sol["execution"]:
+                execution = Execution.query.filter_by(name=exe,solution=sol["solution"]).first()
+                if execution is None:
+                    execution = Execution(name=exe,solution=sol["solution"])
+                db.session.add(execution)
+            db.session.commit()
+                
+        
+        # for exe in Executable:
+        #     execution = Execution.query.filter_by(name=exe.name).first()
+        #     #if execution has yet been registered,
+        #     if execution is None:
+        #         execution = Execution(name=exe.name)
+        #     db.session.add(execution)
+        # db.session.commit()        
+
+
     
 class Operation(db.Model):
     __tablename__ = "operations"
@@ -115,6 +130,7 @@ class Operation(db.Model):
     timestamp= db.Column(db.DateTime,index=True,default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     exec_id = db.Column(db.Integer, db.ForeignKey("executions.id"))
+    cluster = db.Column(db.String(64))
     #user
     #exeuction
     def __repr__(self):
@@ -125,7 +141,9 @@ class Operation(db.Model):
             "timestamp":self.timestamp,
             "user":self.user.username,
             "execution":self.execution.name,
-            "email":self.user.email
+            "email":self.user.email,
+            "solution":self.execution.solution,
+            "cluster":self.cluster
         }
 #----------------------------    
     

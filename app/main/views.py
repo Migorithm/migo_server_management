@@ -96,73 +96,56 @@ def edit_profile_admin_user(id):
 
 #--------------------Operation----------------------------
 
-@main.route('/steps',methods=["GET","POST"])
-def steps():
-    SOLUTION =json.loads(getenv("SOLUTION"))
-    #default
-    solutions = tuple(solutions.keys())
-
-    if request.method == "POST":
-        #second step  (When solution was selected)
-        clusters = SOLUTION.get(request.get_json().get('solution'))
-        if clusters:
-            clusters = tuple(clusters.key())
-        
-        #third step : list (When cluster was selected)
-        nodes = SOLUTION.get(request.get_json().get("solution")).get(request.get_json().get("cluster"))
-        if all((clusters,nodes)):
-            print("Selected cluster has following nodes: " +",".join(ip for ip in nodes))
-            return jsonify("",render_template("selection.html",nodes=nodes))
-        if clusters:
-            print("Selected solution has following clusters: " +",".join(cluster for cluster in clusters))
-            return jsonify("",render_template("selection.html",clusters=clusters))
-    return jsonify("",render_template("selection.html",solutions=solutions))
-        
-
-
-@main.route('/op',methods=["GET","POST"])
-def op():
-    if request.method=="POST":
-        pass
-    print("dd")
-    return render_template("op.html")
-
-@main.route('/practice',methods=["POST"])
-def whatever():
-    info = json.loads(getenv("SOLUTION"))
-    req= request.get_json()
-    
-    if req["req_client"] in info.keys(): 
-        print(info.keys())
-        session["solution"] = req["req_client"]
-        return jsonify({"result": tuple(info[req["req_client"]].keys()),"type":"cluster"})
-    if req["req_client"] in info[session["solution"]]:
-        session["cluster"] = req["req_client"]
-        print(info[session["solution"]][session["cluster"]])
-        return jsonify({"result":tuple(info[session["solution"]][session["cluster"]]),"type":"nodes"})
-    return 
-
-
-
 
 @main.route('/operation',methods=["GET","POST"])
 @login_required
 @admin_required
 def operation():
-    form = OperationForm()
-    if current_user.can(Permission.EXECUTE) and form.validate_on_submit():
-        op = Operation(exec_id=form.execution.data,user=current_user._get_current_object())
+    if request.method=="POST":
+        pass
+
+    return render_template("operation.html")
+
+@main.route('/op_call',methods=["POST"])
+@login_required
+@admin_required
+def op_call():
+    info = json.loads(getenv("SOLUTION"))
+    req= request.get_json()
+    
+    if req["req_client"] in info.keys(): 
+       # print(info.keys())
+        session["solution"] = req["req_client"]
+        return jsonify({"result": tuple(info[req["req_client"]].keys()),"type":"cluster"})
+    if req["req_client"] in info[session["solution"]]:
+        session["cluster"] = req["req_client"]
+       # print(info[session["solution"]][session["cluster"]])
+        return jsonify({"result":tuple(info[session["solution"]][session["cluster"]]),"type":"nodes"})
+    if req["req_client"] == "form":
+        return jsonify("",render_template("oper.html",form=OperationForm(solution=session["solution"])))
+    
+@main.route("/op_call/exec",methods=["POST"])
+@login_required
+@admin_required
+def op_call_exec():
+
+    if current_user.can(Permission.EXECUTE) and request.method=="POST" :
+        req= request.get_json()
+        #You can just put req["execution"] as it is based on number already. and its value is coerced into integer.
+        op = Operation(exec_id=req["execution"],user=current_user._get_current_object(),cluster=req["cluster"])
         db.session.add(op)
         db.session.commit()
-        return redirect(url_for(".operation"))
-    #ops = Operation.query.order_by(Operation.timestamp.desc()).all()
-    return render_template("operation.html",form=form)
+        print(request.get_json())
+        return 
+    return jsonify("dd")
+    
 
 @main.route("/operation/history")
 @login_required
 @admin_required
 def ops_history():
     return render_template("operation_history.html")
+
 
 @main.route("/operation/table")
 @login_required

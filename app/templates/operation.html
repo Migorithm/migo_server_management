@@ -10,13 +10,171 @@
 </div>
 <div>
     {% if current_user.is_administrator() %}
-    <form class="form-inline my-2 my-lg-0" method="POST">
-        {{ form.hidden_tag() }} 
-        {{ form.execution(class="form-control mr-sm-2") }} 
-        {{ form.submit(class="btn btn-outline-success my-2 my-sm-0")}}
-    </form>
+    <div class="row">
+       
+        <div class="col-sm">
+            <h4 style="color: darkgrey;">Solution</h4>
+            <select class="form-select" name="solution" id="solution" onchange="fn(this.value,'step')">
+                <option value="">Choose</option>
+                <option value="Redis">Redis</option>
+                <option value="ElasticSearch">ElasticSearch</option>
+                
+            </select>
+        </div>
+        <div class="col-sm">
+            <h4 style="color:darkgrey;display:none" id="cluster" >Cluster</h4>
+            <select class="form-select" name="step" id="step" style="display: none;" onchange="fn(this.value,'step2')">
+                
+                <option value="">choose</option>
+            </select>
+        </div>
+    </div>
+    
+   
+    <div class="row">
+        <div class="col-sm" id="step2" stype="display:none">
+        </div>
+        <div class="col-sm" id="step3" stype="display:none">    
+        </div> <!-- Possible execution for the cluster -->
+    </div>
+    <div class="row">
+
+    </div>
+
+    
+            
+
+   
     {% endif %}
 
 </div>
+
+{% endblock %}
+
+{% block scripts %}{{ super() }}
+
+<script>
+    var clustername
+
+    function fn(sParam,next){
+        var $target = $("#"+next);
+        $target.empty();
+        if (sParam==""){
+            //$target.append("<option value=''>choose</option>");
+            $target.hide()
+            $("#step2").hide()
+            $("#cluster").hide()
+            return;
+        }
+
+        if (next =="step"){
+            $("#cluster").show()
+        }else if(next=="step2"){
+            $target.append('<br><br><h4 style="color:darkgrey;">Nodes</h4>')
+        }
+    
+        console.log(sParam,next)
+    
+        $.ajax({
+            type: "POST",
+            url : "/op_call",
+            headers: {'Content-Type': 'application/json'},
+            data: JSON.stringify({req_client: sParam}), //value you pass to the server
+            dataType: "json",
+            success: function(response){
+                console.log(response);
+                if (sParam == ""){
+                }
+                
+                if ([response["result"]]){
+                    if (next == "step2"){
+                        $("#step3").empty()
+                        clustername=$("#step").val()
+                        for (let i = 0; i < response["result"].length; i++) {
+                            let res = response["result"][i]  
+                          
+                            $target.append("<label class='form-check-label' style='color: grey'><input class='form-check-input' type='checkbox' name='nodes' value="+res+" checked>"+res+"</label><br>")
+                            }
+                        $("#step3").append('<br><br><h4 style="color:darkgrey;">Execution</h4>')
+                        
+                        $.ajax({
+                            type: "POST",
+                            url: "/op_call",
+                            headers: {"Content-Type":"application/json"},
+                            data: JSON.stringify({req_client: "form"}),
+                            dataType: "json",
+                            success: function(res){
+                                console.log(res)
+                                $("#step3").append(res)
+                                
+                            }
+                        }).done(function(){
+                            $("#step3").append("<br><button class='btn btn-outline-success my-2 my-sm-0' type='button' id='unique' onclick='postreq()'>Go</button>") //submit button
+                            $("#step3").show()
+
+                        })
+                    }  
+                    else {
+                    $("#step2").hide()
+                    $target.append("<option value=''>choose</option>");
+                    for (let i = 0; i < response["result"].length; i++) {
+                        $target.append("<option value='" +response["result"][i] +"'>"+ response["result"][i] +"</option>")
+                      }
+                    }
+                    $target.show()
+                }
+                if (response["type"] === "nodes"){
+                    $("#unique").show()
+        
+                    $("#table").show()
+                }
+            }
+        })
+    };
+
+    function postreq(){
+        let nodes=[]
+        var checkboxes = document.getElementsByName('nodes');
+        var exec  = $("#exec").val()
+        var solution=$("#solution").val()
+        for (var checkbox of checkboxes)
+            {
+                if (checkbox.checked) {
+                    nodes.push(checkbox.value);
+                }
+            }
+        console.log(clustername, nodes,exec,solution)
+        $.ajax({
+            type: "POST",
+            url:"/op_call/exec",
+            headers: {"Content-Type":"application/json"},
+            data: JSON.stringify({"solution":solution ,"cluster": clustername,"nodes":nodes,"execution":exec}),
+            dataType: "json",
+            success: function(res){
+            console.log(res) 
+                
+        }}).done(function(){
+            //To redirect
+            //window.location.replace("/");
+        })
+
+        
+        //$.ajax({
+        //    url:'header.html'
+        //    type: 'GET',
+        //    cache: false,
+        //    dataType: 'html'
+        //  }).done(function(html) {
+         //   $('#container').append(html);
+        //  }).fail(function() {
+        //    alert('エラーが起きました');
+        //  }).always(function() {
+         //   console.log('complete');
+        //  });
+          
+    }
+
+</script>
+
 
 {% endblock %}
