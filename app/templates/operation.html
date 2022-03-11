@@ -29,8 +29,6 @@
             </select>
         </div>
     </div>
-    
-   
     <div class="row">
         <div class="col-sm" id="step2" stype="display:none">
         </div>
@@ -38,7 +36,9 @@
         </div> <!-- Possible execution for the cluster -->
     </div>
     <div class="row">
+        <div class="col-sm" id="result" stype="display:none">
 
+        </div>
     </div>
    
     {% endif %}
@@ -59,12 +59,16 @@
             //$target.append("<option value=''>choose</option>");
             $target.hide()
             $("#step2").hide()
+            $("#step3").hide()
             $("#cluster").hide()
             return;
         }
 
         if (next =="step"){
             $("#cluster").show()
+            $("#step2").hide()
+            $("#step3").hide()
+   
         }else if(next=="step2"){
             $target.append('<br><br><h4 style="color:darkgrey;">Nodes</h4>')
         }
@@ -133,6 +137,7 @@
         var checkboxes = document.getElementsByName('nodes');
         var exec  = $("#exec").val()
         var solution=$("#solution").val()
+        let $result = $("#result")
         for (var checkbox of checkboxes)
             {
                 if (checkbox.checked) {
@@ -140,20 +145,23 @@
                 }
             }
         console.log(clustername, nodes,exec,solution)
+        $result.empty()
+        $result.append('<br><br><h4 style="color:darkgrey;">Progress</h4>')
+        $result.append('<h5 style="color:darkgrey">wokring on ' +clustername+'...</h5>')
+
         $.ajax({
             type: "POST",
             url:"/op_call/exec",
             headers: {"Content-Type":"application/json"},
             data: JSON.stringify({"solution":solution ,"cluster": clustername,"nodes":nodes,"execution":exec}),
             dataType: "json"   
-        }).done(function(res){
+        }).done(function(){
             console.log("execution completed")
-            console.log(res) 
-      
+            let $result = $("#result")
+            $result.empty()
         }).always(function(){
-            console.log("complete")
-            //To redirect
-            window.location.replace("/");
+               //window.location.replace("/operation");
+            window.location.replace("/operation")
         })
 
         
@@ -165,7 +173,7 @@
         //  }).done(function(html) {
          //   $('#container').append(html);
         //  }).fail(function() {
-        //    alert('エラーが起きました');
+        //    alert('Not working');
         //  }).always(function() {
          //   console.log('complete');
         //  });

@@ -7,7 +7,7 @@ from flask_login import login_required,current_user
 from app.decorators import admin_required,permission_required
 from os import getenv
 import json
-from app.core_features.RollingRestart import EsRollingRestart
+from app.core_features.RollingRestart import Es
 
 
 ##DRY
@@ -133,19 +133,36 @@ def op_call_exec():
     if current_user.can(Permission.EXECUTE) and request.method=="POST" :
         req : dict= request.get_json()
         
-        #For ES Rolling restart
-        if req.get("solution") =="ElasticSearch" and \
-            int(req.get("execution")) == Execution.query.filter_by(name="RollingRestart",solution="ElasticSearch").first().id:
-            restart= EsRollingRestart(req.get("nodes"),getenv("AUTH_"+req.get("cluster")))
-            if restart.RollingRestart():
-                print("Right on")
-                #You can just put req["execution"] as its value is coerced into integer in the model.
-                op = Operation(exec_id=req["execution"],user=current_user._get_current_object(),cluster=req["cluster"])
-                db.session.add(op)
-                db.session.commit()
-                flash("Rolling Restart has been completed!")
-     
-
+        #For ES 
+        if req.get("solution") == "ElasticSearch":
+            es = Es(req.get("nodes"),getenv("AUTH_"+req.get("cluster")))
+            
+            #For Rolling restart
+            if int(req.get("execution")) == Execution.query.filter_by(name="RollingRestart",solution="ElasticSearch").first().id:
+                if es.RollingRestart():
+                    print("Right on")
+                    #You can just put req["execution"] as its value is coerced into integer in the model.
+                    op = Operation(exec_id=req["execution"],user=current_user._get_current_object(),cluster=req["cluster"])
+                    db.session.add(op)
+                    db.session.commit()
+                    flash("Rolling Restart has been completed!")
+                    return jsonify({"task":"RollingRestart"})
+                else:
+                    flash("Rolling Restart on cluster '{}' has failed!".format(req.get("cluster")))
+                    return jsonify({"task":"RollingRestart"})
+            #For Cluster Health Check
+            if int(req.get("execution")) == Execution.query.filter_by(name="ClusterHealthCheck",solution="ElasticSearch").first().id:
+                result = es.ClusterHealthCheck()
+                if result in ("green","yellow","red"):
+                    flash("Cluster '{}' status: {}!".format(req.get("cluster"),result))
+      
+                else:
+                    flash("Cluster '{}' status: {}!".format(req.get("cluster"),result))
+            if int(req.get("execution")) == Execution.query.filter_by(name="Configuration",solution="ElasticSearch").first().id:
+                ##es.Configuration() #How to process YAML file?
+                pass
+        #For Redis
+         
         print(request.get_json())
         return jsonify("ee")
     return jsonify("dd")

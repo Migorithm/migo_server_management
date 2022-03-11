@@ -4,7 +4,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 import requests
 import re
 
-class EsRollingRestart:
+class Es:
     def __init__(self,nodes,auth:tuple = None):
         "If authentication is required, it must be given in a form of <id>:<password>"
         self.nodes = nodes
@@ -15,12 +15,19 @@ class EsRollingRestart:
             self.auth = auth.split(":")    
     
     def connector(self) -> Elasticsearch:
-        es= Elasticsearch(self.nodes,
-                        sniff_on_node_failure=True,sniff_timeout=30,
-                        http_auth=(self.auth[0],self.auth[1]) if self.auth else None,
-                        verify_certs=False #Same as "-k"
-                        )
-        return es
+        try :
+            es= Elasticsearch(self.nodes,
+                            sniff_on_node_failure=True,sniff_timeout=30,
+                            http_auth=(self.auth[0],self.auth[1] if hasattr(self, "auth") else None),
+                            verify_certs=False #Same as "-k"
+                            )
+            return es
+        except AttributeError as e:
+            es= Elasticsearch(self.nodes,
+                sniff_on_node_failure=True,sniff_timeout=30,
+                verify_certs=False #Same as "-k"
+                ) 
+            return es
     
     @staticmethod
     def token_generator() -> str:
@@ -35,7 +42,7 @@ class EsRollingRestart:
                     if es_con.cluster.health()['status'] =="green":
                         print("Cluster health green! Continue rolling restart...")
                         print("execute 1") #to be replaced with post request
-                        token = EsRollingRestart.token_generator()
+                        token = Es.token_generator()
                         print(token)
                         res=requests.post(node+"/command/restart",json={"token":token})
                         if res.status_code == 200:
@@ -44,6 +51,7 @@ class EsRollingRestart:
                 except Exception as e:
                     print(f"Error occured! {e}")
                     print(e.args)
+                    return False
                 else:
                     cnt=1
                     #Proceeding with rolling restart with cluster health being yellow or red is banned. 
@@ -58,5 +66,13 @@ class EsRollingRestart:
                         break
         else:
             return True
+    
+    def ClusterHealthCheck(self) -> str:
+        es_con = self.connector()
+        try :
+            return es_con.cluster.health().get("status")
+        except Exception as e:
+            return str(e)
+            
             
             

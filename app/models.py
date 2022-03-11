@@ -101,6 +101,13 @@ class Execution(db.Model):
         return "<Execution %r>" % self.name
     
     @staticmethod
+    def remove_execution(exec_name,solution):
+        exec = Execution.query.filter_by(name=exec_name,solution=solution).first()
+        if exec : 
+            db.session.delete(exec)
+            db.session.commit()
+    
+    @staticmethod
     def insert_execution():
         REDIS= RedisDirector.construct() #dict - solution, execution
         ELASTIC = ElasticDirector.construct() #dict 

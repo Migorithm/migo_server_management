@@ -51,6 +51,7 @@ class ElasticDirector:
             .set_executable("RollingRestart")\
             .set_executable("FileTransfer")\
             .set_executable("ClusterHealthCheck")\
+            .set_executable("Configuration")\
             .get_result()
     
 
