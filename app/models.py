@@ -113,16 +113,7 @@ class Execution(db.Model):
                 db.session.add(execution)
             db.session.commit()
                 
-        
-        # for exe in Executable:
-        #     execution = Execution.query.filter_by(name=exe.name).first()
-        #     #if execution has yet been registered,
-        #     if execution is None:
-        #         execution = Execution(name=exe.name)
-        #     db.session.add(execution)
-        # db.session.commit()        
-
-
+    
     
 class Operation(db.Model):
     __tablename__ = "operations"

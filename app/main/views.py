@@ -7,6 +7,8 @@ from flask_login import login_required,current_user
 from app.decorators import admin_required,permission_required
 from os import getenv
 import json
+from app.core_features.RollingRestart import EsRollingRestart
+
 
 ##DRY
 
@@ -128,15 +130,24 @@ def op_call():
 @login_required
 @admin_required
 def op_call_exec():
-
     if current_user.can(Permission.EXECUTE) and request.method=="POST" :
-        req= request.get_json()
-        #You can just put req["execution"] as it is based on number already. and its value is coerced into integer.
-        op = Operation(exec_id=req["execution"],user=current_user._get_current_object(),cluster=req["cluster"])
-        db.session.add(op)
-        db.session.commit()
+        req : dict= request.get_json()
+        
+        #For ES Rolling restart
+        if req.get("solution") =="ElasticSearch" and \
+            int(req.get("execution")) == Execution.query.filter_by(name="RollingRestart",solution="ElasticSearch").first().id:
+            restart= EsRollingRestart(req.get("nodes"),getenv("AUTH_"+req.get("cluster")))
+            if restart.RollingRestart():
+                print("Right on")
+                #You can just put req["execution"] as its value is coerced into integer in the model.
+                op = Operation(exec_id=req["execution"],user=current_user._get_current_object(),cluster=req["cluster"])
+                db.session.add(op)
+                db.session.commit()
+                flash("Rolling Restart has been completed!")
+     
+
         print(request.get_json())
-        return 
+        return jsonify("ee")
     return jsonify("dd")
     
 

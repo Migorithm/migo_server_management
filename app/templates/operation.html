@@ -40,10 +40,6 @@
     <div class="row">
 
     </div>
-
-    
-            
-
    
     {% endif %}
 
@@ -149,13 +145,15 @@
             url:"/op_call/exec",
             headers: {"Content-Type":"application/json"},
             data: JSON.stringify({"solution":solution ,"cluster": clustername,"nodes":nodes,"execution":exec}),
-            dataType: "json",
-            success: function(res){
+            dataType: "json"   
+        }).done(function(res){
+            console.log("execution completed")
             console.log(res) 
-                
-        }}).done(function(){
+      
+        }).always(function(){
+            console.log("complete")
             //To redirect
-            //window.location.replace("/");
+            window.location.replace("/");
         })
 
         
