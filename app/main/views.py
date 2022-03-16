@@ -7,7 +7,7 @@ from flask_login import login_required,current_user
 from app.decorators import admin_required,permission_required
 from os import getenv
 import json
-from app.core_features.RollingRestart import Es
+from app.core_features.ES import Es
 
 
 ##DRY
@@ -124,7 +124,8 @@ def op_call():
        # print(info[session["solution"]][session["cluster"]])
         return jsonify({"result":tuple(info[session["solution"]][session["cluster"]]),"type":"nodes"})
     if req["req_client"] == "form":
-        return jsonify("",render_template("oper.html",form=OperationForm(solution=session["solution"])))
+        form = OperationForm(solution=session["solution"])
+        return jsonify("",render_template("oper.html",form=form))
     
 @main.route("/op_call/exec",methods=["POST"])
 @login_required
@@ -136,7 +137,6 @@ def op_call_exec():
         #For ES 
         if req.get("solution") == "ElasticSearch":
             es = Es(req.get("nodes"),getenv("AUTH_"+req.get("cluster")))
-            
             #For Rolling restart
             if int(req.get("execution")) == Execution.query.filter_by(name="RollingRestart",solution="ElasticSearch").first().id:
                 if es.RollingRestart():
@@ -150,22 +150,69 @@ def op_call_exec():
                 else:
                     flash("Rolling Restart on cluster '{}' has failed!".format(req.get("cluster")))
                     return jsonify({"task":"RollingRestart"})
+            
             #For Cluster Health Check
             if int(req.get("execution")) == Execution.query.filter_by(name="ClusterHealthCheck",solution="ElasticSearch").first().id:
                 result = es.ClusterHealthCheck()
                 if result in ("green","yellow","red"):
                     flash("Cluster '{}' status: {}!".format(req.get("cluster"),result))
+                    return jsonify({"task":"ClusterHealthCheck"})
       
                 else:
                     flash("Cluster '{}' status: {}!".format(req.get("cluster"),result))
+                    return jsonify({"task":"ClusterHealthCheck"})
+                
+            #For Configuration change
             if int(req.get("execution")) == Execution.query.filter_by(name="Configuration",solution="ElasticSearch").first().id:
                 ##es.Configuration() #How to process YAML file?
-                pass
+                form = es.Configuration
+                if isinstance(form,Exception):
+                    flash(str(form))
+                    return jsonify({"task":"Configuration"})
+                else:
+                    return jsonify({"task":"Configuration","data":form})
+                       
         #For Redis
-         
         print(request.get_json())
         return jsonify("ee")
     return jsonify("dd")
+    
+    
+@main.route("/op_call/config",methods=["POST"])
+@login_required
+@admin_required
+def op_call_config():
+    if current_user.can(Permission.EXECUTE) and request.method=="POST":
+        req:dict = request.get_json()
+        solution=req.get('solution')
+        cluster=req.get("cluster")
+        nodes= req.get("nodes")
+        data = req.get("data")
+        exec_id= req.get("execution") #for db 
+        print(req)
+        
+        if solution =="ElasticSearch":
+            for k,v in data.items():
+                if "," in v:
+                    data[k] = v.split(",")
+                if v.lower() =="true":
+                    data[k] = True
+                if v.lower() =="false":
+                    data[k] =False
+            es= Es(nodes,getenv("AUTH_"+cluster))
+            reports = es.SetConfiguration(data)
+            if reports[0]:
+                op=Operation(exec_id=exec_id,user=current_user._get_current_object(),cluster=cluster)
+                db.session.add(op)
+                db.session.commit()
+                flash("Configuration modification on {} succeeded.".format(cluster))
+                return jsonify({"data":"okay"})
+            else:
+                flash("Configuration modification on {} failed.".format(cluster))
+                for report in reports[1]:
+                    flash(report)    
+                
+                return jsonify({"data":"not okay"})
     
 
 @main.route("/operation/history")

@@ -35,11 +35,11 @@
         <div class="col-sm" id="step3" stype="display:none">    
         </div> <!-- Possible execution for the cluster -->
     </div>
-    <div class="row">
-        <div class="col-sm" id="result" stype="display:none">
+    <br><br>
+    <div class="container" id="result" stype="display:none" >
 
-        </div>
     </div>
+
    
     {% endif %}
 
@@ -49,7 +49,7 @@
 
 {% block scripts %}{{ super() }}
 
-<script>
+<script type="text/javascript">
     var clustername
 
     function fn(sParam,next){
@@ -61,6 +61,7 @@
             $("#step2").hide()
             $("#step3").hide()
             $("#cluster").hide()
+            $("#result").hide()
             return;
         }
 
@@ -68,9 +69,12 @@
             $("#cluster").show()
             $("#step2").hide()
             $("#step3").hide()
+            $("#result").hide()
    
         }else if(next=="step2"){
             $target.append('<br><br><h4 style="color:darkgrey;">Nodes</h4>')
+            $("#step3").hide()
+            $("#result").hide()
         }
     
         console.log(sParam,next)
@@ -107,10 +111,11 @@
                                 console.log(res)
                                 $("#step3").append(res)
                                 
+                                
                             }
-                        }).done(function(){
-                            $("#step3").append("<br><button class='btn btn-outline-success my-2 my-sm-0' type='button' id='unique' onclick='postreq()'>Go</button>") //submit button
-                            $("#step3").show()
+                            }).done(function(){
+                                $("#step3").append("<br><button class='btn btn-outline-success my-2 my-sm-0' type='button' id='unique' onclick='postreq()'>Go</button>") //submit button
+                                $("#step3").show()
 
                         })
                     }  
@@ -125,27 +130,30 @@
                 }
                 if (response["type"] === "nodes"){
                     $("#unique").show()
-        
-                    $("#table").show()
                 }
             }
         })
     };
 
     function postreq(){
+       
         let nodes=[]
-        var checkboxes = document.getElementsByName('nodes');
-        var exec  = $("#exec").val()
-        var solution=$("#solution").val()
+        let checkboxes = document.getElementsByName('nodes');
+        let exec  = $("#execution").val() //id #execution is defiend in oper.html
+ 
+        let solution=$("#solution").val()
         let $result = $("#result")
-        for (var checkbox of checkboxes)
+
+        //get nodes
+        for (let checkbox of checkboxes)
             {
                 if (checkbox.checked) {
                     nodes.push(checkbox.value);
                 }
             }
+
         console.log(clustername, nodes,exec,solution)
-        $result.empty()
+        
         $result.append('<br><br><h4 style="color:darkgrey;">Progress</h4>')
         $result.append('<h5 style="color:darkgrey">wokring on ' +clustername+'...</h5>')
 
@@ -155,13 +163,69 @@
             headers: {"Content-Type":"application/json"},
             data: JSON.stringify({"solution":solution ,"cluster": clustername,"nodes":nodes,"execution":exec}),
             dataType: "json"   
-        }).done(function(){
-            console.log("execution completed")
-            let $result = $("#result")
+        }).done(function(res){
             $result.empty()
+            if (res["task"] == "Configuration" && res["data"]){
+                const config_table = document.getElementById("result");
+                const table = document.createElement("table")
+                table.setAttribute("id","config")
+                table.setAttribute("class","table") //for bootstrapping
+                const head = document.createElement("tr")
+                const directives = document.createElement("td")
+                directives.innerText="Directives"
+                directives.style.fontSize="x-large"
+                directives.style.color="darkgrey"
+                
+                const values = document.createElement("td")
+                values.innerText = "Values"
+                values.style.fontSize="x-large"
+                values.style.color="darkgrey"
+                head.appendChild(directives)
+                head.appendChild(values)
+                table.appendChild(head)
+                console.log(config_table)
+              
+                $result.append('<h4 style="color:#4f3a3a;">Configuration</h4>')
+               // $result.append("<fieldset>")
+                
+        
+                for (let [key,value] of Object.entries(res["data"])){
+                    let newRow = document.createElement("tr")
+                    let cell = document.createElement("td")
+                    cell.innerText=key
+                    let cell2 = document.createElement("td")
+                    let input = document.createElement("INPUT")
+                    
+                    //cell2.innerText=value 
+                    input.setAttribute("type","text")
+                    //input.setAttribute("value",value);
+                    input.setAttribute("placeholder",value)
+              
+                    input.style.border="None"
+                    
+                    cell2.appendChild(input)
+
+                    newRow.appendChild(cell)
+                    newRow.appendChild(cell2)
+                    table.appendChild(newRow)
+                    config_table.appendChild(table)
+
+                    
+                }
+                console.log("Something is here")
+                $result.append("<br><button class='btn btn-outline-success my-2 my-sm-0' type='button' id='unique' onclick='Modify()'>Modify</button>")
+                console.log(solution,nodes,clustername)
+                $result.append("<br><br><br><br>")
+                $result.show()
+
+            }else{
+            console.log("execution completed")
+            window.location.replace("/operation")
+    
+            $result.empty()}
         }).always(function(){
                //window.location.replace("/operation");
-            window.location.replace("/operation")
+            //window.location.replace("/operation")
         })
 
         
@@ -179,6 +243,60 @@
         //  });
           
     }
+
+    function Modify(){
+        let nodes=[]
+        let checkboxes = document.getElementsByName('nodes');
+        let solution=$("#solution").val()
+        let $result = $("#result")
+        let exec  = $("#execution").val()
+
+        //get nodes
+        for (let checkbox of checkboxes)
+            {
+                if (checkbox.checked) {
+                    nodes.push(checkbox.value);
+                }
+            }
+
+        
+        console.log(solution,clustername,nodes)
+
+        var data_to_send={}
+        var table = document.getElementById("config")
+        for (let i=1,row; row= table.rows[i];i++) {
+            
+            val = row.cells[1].querySelector('input').value
+            if (val){
+                data_to_send[row.cells[0].innerText] = val
+            
+        }else {
+            //console.log(row.cells[1].querySelector("input").placeholder)
+            data_to_send[row.cells[0].innerText] = row.cells[1].querySelector("input").placeholder
+        }
+    }
+    console.log(data_to_send)
+        // backlog1 : how to retrive values from table? -> dict type
+        // backlog2 : have agent receive post request 
+    $.ajax({
+        type: "POST",
+        url:"/op_call/config",
+        headers: {"Content-Type":"application/json"},
+        data: JSON.stringify({"solution":solution ,"cluster": clustername,"nodes":nodes,"data":data_to_send,"execution":exec}),
+        dataType: "json"   
+    }).done(function(res){
+        if (res["data"] =="okay"){
+            window.location.replace("/operation")
+            
+        }
+        else{
+            window.location.replace("/operation")
+        }
+        
+
+    })
+    }
+
 
 </script>
 

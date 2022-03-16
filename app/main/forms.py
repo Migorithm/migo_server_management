@@ -1,3 +1,4 @@
+from logging import PlaceHolder
 from flask_wtf import FlaskForm
 from wtforms import StringField,SubmitField,TextAreaField,BooleanField,SelectField,ValidationError
 from wtforms.validators import DataRequired,Length,Email,Regexp
@@ -56,3 +57,12 @@ class OperationForm(FlaskForm):
     def __init__(self,*args,**kwargs):
         super(OperationForm,self).__init__(*args,**kwargs)
         self.execution.choices = [(exe.id,exe.name) for exe in Execution.query.filter_by(solution=kwargs["solution"]).order_by(Execution.name).all()]
+
+class ConfigurationForm(FlaskForm):
+    submit = SubmitField("Go!")
+    def __init__(self,dic:dict):
+        super(ConfigurationForm,self).__init__(dic)
+        for k,v in dic.items():
+            setattr(self,k,StringField("",default=v,render_kw={"placeholder": "{}".format(v)})) #To insert place holder
+    
+    
