@@ -6,9 +6,10 @@ import requests
 import re
 import os
 import yaml
+from .INTERFACE import Interface
 
 
-class Es:
+class Es(Interface):
     def __init__(self,nodes,auth:tuple = None):
         "If authentication is required, it must be given in a form of <id>:<password>"
         self.nodes = nodes
@@ -33,10 +34,10 @@ class Es:
                 ) 
             return es
     
-    @staticmethod
-    def token_generator() -> str:
-        serializer= Serializer("AGENT_KEY",300)
-        return serializer.dumps({"confirm":True}).decode("utf-8")
+    # @staticmethod
+    # def token_generator() -> str:
+    #     serializer= Serializer("AGENT_KEY",300)
+    #     return serializer.dumps({"confirm":True}).decode("utf-8")
     
     def RollingRestart(self):
         es_con = self.connector()
@@ -48,7 +49,7 @@ class Es:
                         print("execute 1") #to be replaced with post request
                         token = Es.token_generator()
                         print(token)
-                        res=requests.post(node+"/command/restart",json={"token":token})
+                        res=requests.post(node+"/es/command/restart",json={"token":token})
                         if res.status_code == 200:
                             print(f"[SUCCESS] Agent : {node} executed Restart...")
                             time.sleep(10) 
@@ -108,7 +109,7 @@ class Es:
         error_reports=[]
         for node in self.agents:
             try:        
-                res=requests.post(node+"/command/configuration",json={"token":token,"data":dic})
+                res=requests.post(node+"/es/command/configuration",json={"token":token,"data":dic})
                 if res.status_code == 200:
                     message= f"[SUCCESS] Agent '{node}' Set Config file..."
                     print("message")  

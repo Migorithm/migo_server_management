@@ -8,6 +8,7 @@ from app.decorators import admin_required,permission_required
 from os import getenv
 import json
 from app.core_features.ES import Es
+from app.core_features.REDIS import Redis
 
 
 ##DRY
@@ -145,7 +146,7 @@ def op_call_exec():
                     op = Operation(exec_id=req["execution"],user=current_user._get_current_object(),cluster=req["cluster"])
                     db.session.add(op)
                     db.session.commit()
-                    flash("Rolling Restart has been completed!")
+                    flash("Rolling Restart on '{}' has been completed!".format(req.get("cluster")))
                     return jsonify({"task":"RollingRestart"})
                 else:
                     flash("Rolling Restart on cluster '{}' has failed!".format(req.get("cluster")))
@@ -156,11 +157,10 @@ def op_call_exec():
                 result = es.ClusterHealthCheck()
                 if result in ("green","yellow","red"):
                     flash("Cluster '{}' status: {}!".format(req.get("cluster"),result))
-                    return jsonify({"task":"ClusterHealthCheck"})
       
                 else:
                     flash("Cluster '{}' status: {}!".format(req.get("cluster"),result))
-                    return jsonify({"task":"ClusterHealthCheck"})
+                return jsonify({"task":"ClusterHealthCheck"})
                 
             #For Configuration change
             if int(req.get("execution")) == Execution.query.filter_by(name="Configuration",solution="ElasticSearch").first().id:
@@ -173,6 +173,36 @@ def op_call_exec():
                     return jsonify({"task":"Configuration","data":form})
                        
         #For Redis
+        if req.get("solution") == "Redis":
+            redis = Redis(req.get("nodes"),getenv("AUTH_"+req.get("cluster")))
+            
+            #For health check
+            if int(req.get("execution")) == Execution.query.filter_by(name="Ping",solution="Redis").first().id:
+                green = redis.ClusterHealthCheck()
+                if green:
+                    flash("Cluster '{}' status: green!".format(req.get("cluster")))
+                else:
+                    flash("Cluster '{}' status: Not all nodes are up and running!".format(req.get("cluster")))
+                return jsonify({"task":"ClusterHealthCheck"})
+                
+            
+            #For rolling restart
+            if int(req.get("execution")) == Execution.query.filter_by(name="RollingRestart",solution="Redis").first().id:
+                success = redis.RollingRestart()
+                if success:
+                    print("Right on")
+                    op = Operation(exec_id=req["execution"],user=current_user._get_current_object(),cluster=req["cluster"])
+                    db.session.add(op)
+                    db.session.commit()
+                    flash("Rolling Restart on {} has been completed!".format(req.get("cluster")))
+                    return jsonify({"task":"RollingRestart"})
+                else:
+                    flash("Rolling Restart on cluster '{}' has failed!".format(req.get("cluster")))
+                    return jsonify({"task":"RollingRestart"})
+                    
+            
+            #For config modification
+        
         print(request.get_json())
         return jsonify("ee")
     return jsonify("dd")
