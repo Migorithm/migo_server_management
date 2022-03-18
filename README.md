@@ -1,8 +1,27 @@
-## Vertica Project
+## Vertica Project(English)
 Note: this application is to work with agent server. <br>
 Please refer to:  
 
-    https://github.com/Migorithm/migo_server_management_agent .
+    https://github.com/Migorithm/migo_server_management_agent
+
+### What is it?
+"Vertica" in Vertica follows the name of a team, so it's not so much meaningful as nominal.<br><br>
+
+What it really does is provide Master-Agent communication through ***RESTful*** api with due regard to security as well as user's convenience.<br><br>
+
+Here, Master server is in charge of taking user request through web api, processing it and sending it off to agent server.<br><br>
+
+And then agent server gets the request from master and execute the requested call on the server.<br><br>
+
+Then, why not use Ansible or some other configuration management application? There are several reasons:
+- They're too infra-specific.
+- Internally, they use ssh protocol except for some other Master-agent program like puppet or Saltstack. Therefore, there is no blocking logic in the agent side from malcious user who tries to get into its system, resulting in security issue.
+- Learning them itself requires some amount of learning curve. 
+
+### Main features
+#### Login page
+Login_required function is implemented so when any of the endpoints require user being logged in, it redirected to login page and once you login in, you'll be pushed back to the page you originally wanted to go on. 
+<img src="./guideline_pics/first_page.png">
 
 
 ### Configuration & Environment variable
