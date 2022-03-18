@@ -5,8 +5,45 @@
 <div class="page-header">
     <h3 style="color: rgb(162, 146, 146);">Vertica Project Registration Form</h3>
 </div>
-<div class="col-md-6">
-{{ wtf.quick_form(form) }}
+<br>
+<div class="container">
+<form class="form" method="POST">
+    {{ form.hidden_tag() }} 
+    <div class="row">
+        <div class="col-lg-6">
+            {{ form.email(class="form-control mr-sm-6",placeholder="Email") }} 
+        </div>
+    <br><br><br>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            {{ form.username(class="form-control mr-sm-6", placeholder="Username") }}
+        </div>
+    <br><br><br>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            {{ form.password(class="form-control mr-sm-6", placeholder="Password") }}
+        </div>
+    <br><br><br>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            {{ form.password2(class="form-control mr-sm-6", placeholder="Confirm Password") }}
+        </div>
+    <br><br><br>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            {{ form.submit(class="btn btn-outline-success my-2 my-sm-0") }}
+        </div>
+    <br><br><br>
+    </div>
+</form>
 </div>
+<!-- <div class="col-md-6">
+{{ wtf.quick_form(form) }}
+</div> -->
 {% endblock %}
+
 

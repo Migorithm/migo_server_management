@@ -58,78 +58,55 @@ This time, you chose "Configuration" from Execution select field and press "Go" 
 
 As you can see, you can freely change the configuration for Elasticsearch and it will save it on the agent node(where you have Elasticsearch up and running).<br><br>
 
-The following is how it was stored on agent node.
+The following is how it was stored on agent node.<br>
 <img src="./guideline_pics/modiResult.png"><br><br>
 
+#### 2. Operation history
+You may want to also keep track of what operations you and other users have executed. For that, I created table: <br>
+
+<img src="./guideline_pics/op_history1.png"><br><br>
+
+Asynchronously, you can search for:
+- who made it.
+- what was executed.
+
+<img src="./guideline_pics/op_history2.png"><br>
+There may be id "mago" but there is no history of them executing any of the operation.<br><br>
+
+<img src="./guideline_pics/op_history3.png"><br>
+You collect operation history of only "ClusterHealthCheck". Notice that even before you finish off the typing, it shows you. In fact, I didn't even press ENTER key. 
+
+#### 3. Security
+##### Master-side
+- (User registration) Using one-way cryptographic transformation(itsdangerous), user password can't be read unless you know authentic password. 
+
+- (Session management) a session can last only for 30 minutes.
+
+- (User account confirmation) The account must be confirmed by proper email. To send user back to proper url link, **JWT** was used. 
+
+- (Access Control List) If the user is not granted some privilges, there is very little they can do in a certain page. Here, they can't execute any of operations. 
+
+- (Protection against CSRF - cross-site request forgery) using security token and applying them to all web form, it projects all the user form from CSRF
+
+- (Request tokenization) When sending a request to agent, they also send a token which authenticate the master.
+
+##### Agent-side
+- (From Master Only) It can get traffic only from master
+
+- (No use of subprocess) Subprocess is intrinsically insecure. With that said, service management require system management. To reconcile two requirements, I used pystemd to leverage service Unit
+
+- (Verifying token from master) When receiving a request and token, it not only checks master ip but also token it gets. 
 
 
-
-#### Login page
+#### 4. Login page
 Login_required function is implemented so when any of the endpoints require user being logged in, it redirected to login page and once you login in, you'll be pushed back to the page you originally wanted to go on. 
 <img src="./guideline_pics/first_page.png">
 
+#### 5. Registration page
+You can limit the hostname by configuring "DOMAIN" environment variable. In this project, it's "wemakeprice.com". So any registration request with different domain will be rejected<br>
+<img src="./guideline_pics/registration_page1.png"><br><br>
+<img src="./guideline_pics/registration_page2.png"><br><br>
 
-### Configuration & Environment variable
-You should put any credentials and sensitive infomration into environment variable.<br>
-In this project, I used ".flaskenv" for it.<br><br>
-
-Information that should be kept under wrap is:
-- "AUTH_" for authentication of ES cluster id and password
-- "SECRET_KEY" for flaskform and JWT
-- "AGENT_KEY" for master-agent confirmation
-- "ADMINS" to register admin mail
-- "DOMAIN" to block any other users who has no specified domain in their email from registration
-- "MAIL_SERVER" for SMTP
-- "SOLUTION" to specify managed solution and its constituent clusters and nodes
-
-<br><br>
-
-
-#### app.execs.py
-With builder pattern applied, this is where you define available execution for each solution. Take ElasticSearch for example:
-```python
-class ElasticDirector:
-    "Elastic Director that can build a complex representation."
-    @staticmethod
-    def construct():
-        """Constrcut and return the final product."""
-        return ExecutableBuilder()\
-            .set_solution_type("ElasticSearch")\
-            .set_executable("RollingRestart")\
-            .set_executable("FileTransfer")\
-            .set_executable("ClusterHealthCheck")\
-            .get_result()
-```
-If you want to add more functionality, you can simply modify the return part by setting **".set_executable("command you want")"**
-<br>
-
-And then, you can have the feature registered to ***Execution*** model: 
-```python
-class Execution(db.Model):
-    ...
-    ...
-
-    @staticmethod
-    def insert_execution():
-        REDIS= RedisDirector.construct() #dict - solution, execution
-        ELASTIC = ElasticDirector.construct() #dict 
-        SOLUTIONS=[REDIS,ELASTIC]
-        for sol in SOLUTIONS:
-            for exe in sol["execution"]:
-                execution = Execution.query.filter_by(name=exe,solution=sol["solution"]).first()
-                if execution is None:
-                    execution = Execution(name=exe,solution=sol["solution"])
-                db.session.add(execution)
-            db.session.commit()
-```
-<br>
-
-As you can imagine, you can simply get into flask shell and execute the following:
-*flask shell*:
-```python
-a= Execution()
-a.insert_execution()
-```
-
+If you put the correct domain name, they will send a confirmation mail to the given email. <br>
 
 

@@ -46,9 +46,7 @@ class Es(Interface):
                 try :
                     if es_con.cluster.health()['status'] =="green":
                         print("Cluster health green! Continue rolling restart...")
-                        print("execute 1") #to be replaced with post request
                         token = Es.token_generator()
-                        print(token)
                         res=requests.post(node+"/es/command/restart",json={"token":token})
                         if res.status_code == 200:
                             print(f"[SUCCESS] Agent : {node} executed Restart...")
@@ -87,12 +85,9 @@ class Es(Interface):
         #First, check the version of cluster
         es_con = self.connector()
         try : 
-            print("got in1")
             version :str = es_con.info().get("version").get("number") 
-            print("got in2", version)
             dirname = os.path.dirname(__file__)
             filename = os.path.join(dirname, f'../solutions/elasticsearch/elasticsearch{version[0]}.yml')
-            print("got in2", filename)
             with open(filename,encoding='UTF8') as f:
                 data = Es.flatten_dict(yaml.load(f,Loader=yaml.FullLoader))
                 return data

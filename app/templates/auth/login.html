@@ -4,6 +4,27 @@
 {% block page_content %}
 <a href="{{ url_for('auth.register')}}" style="color: rgb(162, 146, 146);text-decoration: none;" >New user? Registration</a>
 <br><br>
-{{ wtf.quick_form(form) }}
+<!-- {{ wtf.quick_form(form) }} -->
+<form class="form" method="POST">
+{{ form.hidden_tag() }} 
+<div class="row">
+    <div class="col-lg-6">
+        {{ form.email(class="form-control mr-sm-6",placeholder="Email") }} 
+    </div>
+<br><br><br>
+</div>
+<div class="row">
+    <div class="col-lg-6">
+        {{ form.password(class="form-control mr-sm-6", placeholder="Password") }}
+    </div>
+<br><br><br>
+</div>
 
+<!-- <div class="row">
+{{ form.remember_me(type="checkbox" ,class="form-control mr-sm-2", placeholder="Keep me login") }}
+</div> -->
+
+{{ form.submit(class="btn btn-outline-success my-2 my-sm-0")}} 
+
+</form>
 {% endblock %}
