@@ -1,3 +1,10 @@
+## Vertica Project
+Note: this application is to work with agent server. <br>
+Please refer to:  
+
+    https://github.com/Migorithm/migo_server_management_agent .
+
+
 ### Configuration & Environment variable
 You should put any credentials and sensitive infomration into environment variable.<br>
 In this project, I used ".flaskenv" for it.<br><br>
