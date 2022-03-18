@@ -19,6 +19,17 @@ Then, why not use Ansible or some other configuration management application? Th
 - Learning them itself requires some amount of learning curve. 
 
 ### Main features
+#### 1. Operation on Server
+Say you have managed clusters - not just one but hundreds!. To top it off, it's not just one solution but multiple solution(In this project, it's **Elasticsearch** and **Redis**).<br><br>
+
+Given this situation, you first select solution, and then this application shows you a list of clusters that belong to the solution. You select one of them, then it will give you a list of nodes in a "checkable" form.<br><br>
+
+All this happens asynchronously.:
+<img src="./guideline_pics/op1.png"><br><br>
+<img src="./guideline_pics/op2.png"><br><br>
+<img src="./guideline_pics/op3.png"><br><br>
+<img src="./guideline_pics/op4.png"><br><br>
+
 #### Login page
 Login_required function is implemented so when any of the endpoints require user being logged in, it redirected to login page and once you login in, you'll be pushed back to the page you originally wanted to go on. 
 <img src="./guideline_pics/first_page.png">
