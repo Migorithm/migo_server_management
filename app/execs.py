@@ -53,7 +53,6 @@ class ElasticDirector:
             .set_executable("ClusterHealthCheck")\
             .set_executable("Configuration")\
             .get_result()
-    
 
 class RedisDirector:
     "Redis Director that can build a complex representation."
@@ -65,4 +64,5 @@ class RedisDirector:
             .set_executable("RollingRestart")\
             .set_executable("FileTransfer")\
             .set_executable("Ping")\
+            .set_executable("Configuration")\
             .get_result()

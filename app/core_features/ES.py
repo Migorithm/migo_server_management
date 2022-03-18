@@ -107,7 +107,7 @@ class Es(Interface):
                 res=requests.post(node+"/es/command/configuration",json={"token":token,"data":dic})
                 if res.status_code == 200:
                     message= f"[SUCCESS] Agent '{node}' Set Config file..."
-                    print("message")  
+                    print(message)  
                 else:
                     message = f"[ERROR] Sent a post request but agent '{node}' failed to set config file"
                     error_reports.append(message)

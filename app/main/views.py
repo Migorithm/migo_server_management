@@ -165,7 +165,7 @@ def op_call_exec():
             #For Configuration change
             if int(req.get("execution")) == Execution.query.filter_by(name="Configuration",solution="ElasticSearch").first().id:
                 ##es.Configuration() #How to process YAML file?
-                form = es.Configuration
+                form:dict = es.Configuration
                 if isinstance(form,Exception):
                     flash(str(form))
                     return jsonify({"task":"Configuration"})
@@ -198,10 +198,16 @@ def op_call_exec():
                     return jsonify({"task":"RollingRestart"})
                 else:
                     flash("Rolling Restart on cluster '{}' has failed!".format(req.get("cluster")))
-                    return jsonify({"task":"RollingRestart"})
-                    
+                    return jsonify({"task":"RollingRestart"})            
             
             #For config modification
+            if int(req.get("execution"))==Execution.query.filter_by(name="Configuration",solution="Redis").first().id:
+                data:dict = redis.Configuration
+                if isinstance(data,Exception):
+                    flash(str(data))
+                    return jsonify({"task":"Configuration"})
+                else:
+                    return jsonify({"task":"Configuration","data":data})
         
         print(request.get_json())
         return jsonify("ee")
@@ -219,7 +225,7 @@ def op_call_config():
         nodes= req.get("nodes")
         data = req.get("data")
         exec_id= req.get("execution") #for db 
-        print(req)
+        #print(req)
         
         if solution =="ElasticSearch":
             for k,v in data.items():
@@ -242,6 +248,20 @@ def op_call_config():
                 for report in reports[1]:
                     flash(report)    
                 
+                return jsonify({"data":"not okay"})
+        if solution =="Redis":
+            redis = Redis(nodes,getenv("AUTH_"+cluster))
+            reports= redis.SetConfiguration(data)
+            if reports[0]:
+                op=Operation(exec_id=exec_id, user=current_user._get_current_object(),cluster=cluster)
+                db.session.add(op)
+                db.session.commit()
+                flash("Configuration modification on {} succeeded.".format(cluster))
+                return jsonify({"data":"okay"})
+            else:
+                flash("Configuration modification on {} failed.".format(cluster))
+                for report in reports[1]:
+                    flash(report) 
                 return jsonify({"data":"not okay"})
     
 

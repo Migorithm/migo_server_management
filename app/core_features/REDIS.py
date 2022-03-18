@@ -1,3 +1,4 @@
+from collections.abc import MutableMapping
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 import requests
 import time 
@@ -76,10 +77,43 @@ class Redis(Interface):
                         break  
         return True
                     
-    
+    @property
     def Configuration(self):
-        #First, you have to insert Configuration into database first. 
-        pass
+        #Fetch current data from the first server. 
+        file:dict
+        error:Exception 
+        for node in self.agents:
+            try: 
+                token = Redis.token_generator()
+                print(node)
+                res = requests.post("http://"+node[0]+":5000/redis/command/get_config",json={"token":token,"port":node[1]})
+                #You will get the json form of data
+                file = res.json()
+                return file
+            except Exception as e:
+                error=e
+        return error
+        #process it
+        
+        
     
-    def SetConfiguration(self):
-        pass
+    def SetConfiguration(self,dic:MutableMapping) -> bool:
+        token = Redis.token_generator()
+        error_reports=[]
+        for node in self.agents:
+            try:
+                res = requests.post("http://"+node[0]+":5000/redis/command/set_config",json={"token":token,"data":dic,"port":node[1]})
+                if res.status_code == 200:
+                    message =f"[SUCCESS] Agent '{node}' Set Config file..."
+                    print(message)
+                else:
+                    message = f"[ERROR] Sent a post request but agent '{node}' failed to set config file"
+                    error_reports.append(message)
+            except Exception as e:
+                message =f"[Error] Post request to '{node}' failed !"
+                print(message)
+                error_reports.append(message)
+        if not error_reports:
+            return True,0
+        else:
+            return False,error_reports

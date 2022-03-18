@@ -121,7 +121,6 @@ class Execution(db.Model):
             db.session.commit()
                 
     
-    
 class Operation(db.Model):
     __tablename__ = "operations"
     id = db.Column(db.Integer,primary_key=True)
