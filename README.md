@@ -19,7 +19,7 @@ Then, why not use Ansible or some other configuration management application? Th
 - Learning them itself requires some amount of learning curve. 
 
 ### Main features
-#### 1. Operation on Server
+#### 1. Operation on agent servers 
 Say you have managed clusters - not just one but hundreds!. To top it off, it's not just one solution but multiple solution(In this project, it's **Elasticsearch** and **Redis**).<br><br>
 
 Given this situation, you first select solution, and then this application shows you a list of clusters that belong to the solution. You select one of them, then it will give you a list of nodes in a "checkable" form.<br><br>
@@ -28,7 +28,41 @@ All this happens asynchronously.:
 <img src="./guideline_pics/op1.png"><br><br>
 <img src="./guideline_pics/op2.png"><br><br>
 <img src="./guideline_pics/op3.png"><br><br>
+<img src="./guideline_pics/op5.png"><br><br>
 <img src="./guideline_pics/op4.png"><br><br>
+
+As you can see, every solution will have different types of exeucution and for the each cluster, they will have different authentication method, that will be covered later.<br>
+
+<img src="./guideline_pics/op6.png"><br><br>
+
+##### Rolling restart
+One of the biggest catalysts of the project was rolling restart which, in fact, sometimes takes whopping 7hours to complete(your Elasticsearch cluster, for example, can be as big as 30 nodes in size.)<br><br>
+
+When you exectute RollingRestart, your master server will first check if cluster health is "green" before they execute it. they it gets the "green-light", it will proceed, logging:
+
+    Cluster health green! Continue rolling restart...
+    [SUCCESS] Agent : http://agentIP:PORT executed Restart...
+
+And to make sure the whole cluster is up and running in green status, after restarting the server, it keeps the health in check. If interested in how it works, refer to:
+
+    app/core_features/ES.py
+
+##### Configuration modification
+Logging in on to each server when configuration modification is required is such a pain. And that's where I came up with the idea of using RESTful service to modify it too that resembles just like how modification in AWS works.<br><br>
+
+<img src="./guideline_pics/modi1.png"><br><br>
+
+This time, you chose "Configuration" from Execution select field and press "Go" button. It will then show you the following:
+
+<img src="./guideline_pics/modi2.png"><br><br>
+
+As you can see, you can freely change the configuration for Elasticsearch and it will save it on the agent node(where you have Elasticsearch up and running).<br><br>
+
+The following is how it was stored on agent node.
+<img src="./guideline_pics/modiResult.png"><br><br>
+
+
+
 
 #### Login page
 Login_required function is implemented so when any of the endpoints require user being logged in, it redirected to login page and once you login in, you'll be pushed back to the page you originally wanted to go on. 
