@@ -73,6 +73,7 @@ class UserModelTestCase(unittest.TestCase):
         self.assertFalse(u.can(Permission.WRITE))
         self.assertFalse(u.can(Permission.EXECUTE))
         self.assertFalse(u.can(Permission.ADMIN))
+        
     def test_admin_role(self):
         u = User(email ="migo@wemakeprice.com", password="cat") 
         self.assertTrue(u.can(Permission.READ))

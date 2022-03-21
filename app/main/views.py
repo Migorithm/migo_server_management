@@ -179,6 +179,7 @@ def op_call_exec():
             #For health check
             if int(req.get("execution")) == Execution.query.filter_by(name="Ping",solution="Redis").first().id:
                 green = redis.ClusterHealthCheck()
+                print(green)
                 if green:
                     flash("Cluster '{}' status: green!".format(req.get("cluster")))
                 else:

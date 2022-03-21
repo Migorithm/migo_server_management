@@ -34,10 +34,10 @@ class Es(Interface):
                 ) 
             return es
     
-    # @staticmethod
-    # def token_generator() -> str:
-    #     serializer= Serializer("AGENT_KEY",300)
-    #     return serializer.dumps({"confirm":True}).decode("utf-8")
+    @staticmethod
+    def token_generator() -> str:
+        serializer= Serializer(os.getenv("AGENT_KEY"),300)
+        return serializer.dumps({"confirm":True}).decode("utf-8")
     
     def RollingRestart(self):
         es_con = self.connector()
@@ -47,6 +47,7 @@ class Es(Interface):
                     if es_con.cluster.health()['status'] =="green":
                         print("Cluster health green! Continue rolling restart...")
                         token = Es.token_generator()
+                        
                         res=requests.post(node+"/es/command/restart",json={"token":token})
                         if res.status_code == 200:
                             print(f"[SUCCESS] Agent : {node} executed Restart...")
@@ -104,6 +105,7 @@ class Es(Interface):
         error_reports=[]
         for node in self.agents:
             try:        
+                print(token)
                 res=requests.post(node+"/es/command/configuration",json={"token":token,"data":dic})
                 if res.status_code == 200:
                     message= f"[SUCCESS] Agent '{node}' Set Config file..."

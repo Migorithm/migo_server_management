@@ -60,5 +60,14 @@ a= Execution()
 a.insert_execution()
 ```
 
+#### Adding User role 
+```python
+role = Role
+role.insert_roles()
+```
 
-
+#### Authentication 
+.flaskenv
+```
+AUTH_Cluster_name=Password
+```
