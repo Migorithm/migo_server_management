@@ -9,6 +9,8 @@ from os import getenv
 import json
 from app.core_features.ES import Es
 from app.core_features.REDIS import Redis
+from app.core_features.AGENT import Agent
+from typing import IO
 
 
 ##DRY
@@ -278,3 +280,42 @@ def ops_history():
 @admin_required
 def ops_table():
     return {"data":[op.to_dict() for op in Operation.query]}
+
+
+#----------------Agent synchronization -----------------------------
+@main.route('/agent_sync',methods=["GET","POST"])
+@login_required
+@admin_required
+def sync():
+    """
+    On agent server, it has: 
+    1. status check ('/',methods=["GET"]) 
+    2. sync ('/agent/command/sync',methods=["POST"] - token required)
+    3. restart ('/agent/command/restart',methods=["POST"] - token required) 
+    
+    Todo list:
+    - showing the list of clusters and 
+    """
+    if request.method=="POST":
+        #From front
+        req:dict = request.get_json()
+        nodes:list = req.get("cluster")
+        cluster_name:str= ""
+        out_of_sync:list[str] = filter(lambda x: not Agent.sync_status(x),nodes) #status check
+        
+
+        
+        #To the agents
+        Agent.file_load()
+        files:dict = Agent.files
+        sync_success = Agent.agent_sync(out_of_sync,files)
+        if not sync_success:
+            print("[ERROR] Attempt to synchronize Agent application on {} failed".format(cluster_name))
+        else:
+            if Agent.agent_sync(out_of_sync):
+                return jsonify() #success
+            else:
+                return jsonify() #fail
+            
+    return render_template("agent_sync.html")
+    
