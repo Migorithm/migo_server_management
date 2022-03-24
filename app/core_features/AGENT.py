@@ -1,10 +1,12 @@
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 import os
-from typing import Generator
 import requests
 
 class Agent:
     AGENT_DIR=os.getenv("AGENT_DIR") 
+    UNSYNC=0
+    SYNC=1
+    FAILURE=2
        
     def __new__(cls):
         return cls
@@ -15,8 +17,8 @@ class Agent:
         return serializer.dumps({"confirm":True}).decode("utf-8")
     
     @staticmethod
-    def _file_list()-> Generator[tuple]:
-        for _,file in zip(range(10000),os.listdir(Agent.AGENT_DIR)):
+    def _file_list():
+        for _,file in zip(range(10000),os.listdir(Agent.AGENT_DIR)): #AGENT_DIR must be absolute path 
             if os.path.isfile(file):
                 yield str(_),open(file,"rb") #Must be string or byte type
     
@@ -27,30 +29,45 @@ class Agent:
         cls.files["token"] = Agent.token_generator()
         
     @staticmethod
-    def status(node:str):
-        res= requests.get(node+"/")
-        if res.ok:
-            if res.json().get("version") ==os.getenv("AGENT_VERSION"):
-                print("Version match")
-                return True
-            else:
-                return False
-        else:
-            raise ConnectionError("Connection to '{}' failed.".format(node))
+    def sync_status(node:str):
+        try:
+            res= requests.get(node+"/")
+            if res.ok:
+                if res.json().get("version") ==os.getenv("AGENT_VERSION"):
+                    print("Version match")
+                    return Agent.SYNC
+                else:
+                    print("Version not matched!")
+                    return Agent.UNSYNC
+        except requests.exceptions.ConnectionError as e:
+            print("Connection to '{}' failed.".format(node))
+            return Agent.FAILURE
     
     @staticmethod
     def agent_sync(nodes:list[str],files:dict):
         success=[]
         for node in nodes:
-            url = node + "/file_upload"
+            url = node + "/agent/command/sync"
+            
             res=requests.post(url,files=files)
             if res.ok:
-                print("Agent sync to {} completed successfully".format(node))
+                print("[SUCCESS] Agent sync to {} completed successfully".format(node))
                 success.append(True)
             else:
-                print("Agent sync to {} went wrong".format(node))
+                print("[ERROR] Agent sync to {} failed".format(node))
                 success.append(False)
-        if all(success):
-            return True
-        else:
-            return False
+        return all(success)
+
+    @staticmethod
+    def agent_restart(nodes:list[str]):
+        success=[]
+        for node in nodes:
+            url = node + "/agent/command/restart"
+            res=requests.post(url,json={"token":Agent.token_generator()})
+            if res.ok:
+                print("[SUCCESS] Agent restart on {} completed successfully".format(node))
+                success.append(True)
+            else:
+                print("[ERROR] Agent restart on {} failed".format(node))
+                success.append(False)
+        return all(success)

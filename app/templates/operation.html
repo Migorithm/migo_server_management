@@ -30,13 +30,13 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-sm" id="step2" stype="display:none">
+        <div class="col-sm" id="step2" style="display:none">
         </div>
-        <div class="col-sm" id="step3" stype="display:none">    
+        <div class="col-sm" id="step3" style="display:none">    
         </div> <!-- Possible execution for the cluster -->
     </div>
     <br><br>
-    <div class="container" id="result" stype="display:none" >
+    <div class="container" id="result" style="display:none" >
 
     </div>
 
@@ -171,6 +171,7 @@
                 table.setAttribute("id","config")
                 table.setAttribute("class","table") //for bootstrapping
                 const head = document.createElement("tr")
+                
                 const directives = document.createElement("td")
                 directives.innerText="Directives"
                 directives.style.fontSize="x-large"
@@ -180,6 +181,7 @@
                 values.innerText = "Values"
                 values.style.fontSize="x-large"
                 values.style.color="darkgrey"
+
                 head.appendChild(directives)
                 head.appendChild(values)
                 table.appendChild(head)

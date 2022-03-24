@@ -96,7 +96,6 @@ class Redis(Interface):
         #process it
         
         
-    
     def SetConfiguration(self,dic:MutableMapping) -> bool:
         token = Redis.token_generator()
         error_reports=[]

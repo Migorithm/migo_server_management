@@ -2,7 +2,7 @@ from . import main
 from flask import render_template,session,redirect,url_for,current_app, flash, abort,jsonify,request
 from .. import db
 from ..models import Execution, Operation, Permission, User,Role
-from .forms import EditProfileForm, NameForm,SearchForm,EditProfileAdminForm,OperationForm
+from .forms import EditProfileForm, NameForm,SearchForm,EditProfileAdminForm,OperationForm,ClusterForm
 from flask_login import login_required,current_user
 from app.decorators import admin_required,permission_required
 from os import getenv
@@ -10,7 +10,7 @@ import json
 from app.core_features.ES import Es
 from app.core_features.REDIS import Redis
 from app.core_features.AGENT import Agent
-from typing import IO
+import re
 
 
 ##DRY
@@ -287,6 +287,15 @@ def ops_table():
 @login_required
 @admin_required
 def sync():
+    form = ClusterForm()
+    
+    #Get request. Maybe just multiple tables of cluster and its node?
+    return render_template("agent_sync.html",form=form)
+    
+    
+    
+@main.route("/nodes_to_sync",methods=["POST"])
+def nodes_to_sync():
     """
     On agent server, it has: 
     1. status check ('/',methods=["GET"]) 
@@ -296,26 +305,42 @@ def sync():
     Todo list:
     - showing the list of clusters and 
     """
-    if request.method=="POST":
-        #From front
-        req:dict = request.get_json()
-        nodes:list = req.get("cluster")
-        cluster_name:str= ""
-        out_of_sync:list[str] = filter(lambda x: not Agent.sync_status(x),nodes) #status check
-        
-
-        
-        #To the agents
-        Agent.file_load()
-        files:dict = Agent.files
-        sync_success = Agent.agent_sync(out_of_sync,files)
-        if not sync_success:
-            print("[ERROR] Attempt to synchronize Agent application on {} failed".format(cluster_name))
-        else:
-            if Agent.agent_sync(out_of_sync):
-                return jsonify() #success
-            else:
-                return jsonify() #fail
-            
-    return render_template("agent_sync.html")
+    MANAGEMENT_DATABASE:dict=json.loads(getenv("SOLUTION"))
     
+    #From front
+    req:dict = request.get_json()
+    clustername:str = req.get("cluster")
+    if clustername:
+        
+        #get nodes 
+        for cluster in MANAGEMENT_DATABASE.values():
+            unparsed_nodes:list = cluster.get(clustername)
+            if unparsed_nodes:
+                #parsing nodes address 
+                regex = re.compile(r"\d+.\d+.\d+.\d+")
+                nodes = set(map(lambda x: "http://"+regex.search(x).group()+":5000",unparsed_nodes))
+                break
+    
+        #sync check 
+        print(nodes,type(nodes))
+        sync_state:list[tuple[str,int]] = list(map(lambda x: (x,Agent.sync_status(x)),nodes))
+        print(sync_state)
+        return jsonify({"sync":sync_state})
+        
+    
+        
+        
+    #To the agents
+    Agent.file_load()
+    files:dict = Agent.files
+    sync_success = Agent.agent_sync(out_of_sync,files)
+    if not sync_success:
+        print("[ERROR] Attempt to synchronize Agent application on {} failed.".format(cluster_name))
+        abort(404)
+    else: #If successful, procede with restart 
+        if Agent.agent_restart(out_of_sync):
+            print("[SUCCESS] Attempt to restart Agent application on {} succeeded.".format(cluster_name))
+            return jsonify({"data":"okay"}) #success
+        else:
+            print("[ERROR] Restart on {} failed!".format(cluster_name))
+            return jsonify({"data":"not okay"}) #fail

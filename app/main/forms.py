@@ -1,9 +1,9 @@
-from logging import PlaceHolder
 from flask_wtf import FlaskForm
-from wtforms import StringField,SubmitField,TextAreaField,BooleanField,SelectField,ValidationError
+from wtforms import StringField,SubmitField,TextAreaField,BooleanField,SelectField,ValidationError,SelectMultipleField,widgets
 from wtforms.validators import DataRequired,Length,Email,Regexp
 from app.models import User,Role,Execution
-from enum import Enum
+import os
+import json
 
 
 class NameForm(FlaskForm):
@@ -64,5 +64,24 @@ class ConfigurationForm(FlaskForm):
         super(ConfigurationForm,self).__init__(dic)
         for k,v in dic.items():
             setattr(self,k,StringField("",default=v,render_kw={"placeholder": "{}".format(v)})) #To insert place holder
-    
+
+class MultiCheckboxField(SelectMultipleField):
+    widget = widgets.ListWidget(prefix_label=False)
+    option_widget = widgets.CheckboxInput()
+
+
+class ClusterForm(FlaskForm):
+    cluster = SelectField(coerce=str)
+    def __init__(self,*args,**kwargs):
+        super(ClusterForm,self).__init__(*args,**kwargs)
+        
+        self.cluster.choices =[(None,"Choose")]+ [(cluster,cluster) for clusters in json.loads(os.getenv("SOLUTION")).values()
+                                                for cluster in clusters.keys()]
+
+    @classmethod
+    def node_checkbox(cls,clustername):
+        cls.nodes=SelectField(coerce=str)
+        cls.nodes.choices=[(node,node)for _,node in zip(range(1000),*[clusters.get(clustername) for clusters in json.loads(os.getenv("SOLUTION")).values() if clusters.get(clustername)])]
+
+        return cls
     
