@@ -311,7 +311,6 @@ def nodes_to_sync():
     req:dict = request.get_json()
     clustername:str = req.get("cluster")
     if clustername:
-        
         #get nodes 
         for cluster in MANAGEMENT_DATABASE.values():
             unparsed_nodes:list = cluster.get(clustername)
@@ -323,24 +322,30 @@ def nodes_to_sync():
     
         #sync check 
         print(nodes,type(nodes))
-        sync_state:list[tuple[str,int]] = list(map(lambda x: (x,Agent.sync_status(x)),nodes))
+        sync_state:list[tuple[str,int]] = list(map(lambda x: Agent.sync_status(x),nodes))
         print(sync_state)
         return jsonify({"sync":sync_state})
         
+        
     
-        
-        
+    nodename:str = req.get("node")
+    
     #To the agents
-    Agent.file_load()
-    files:dict = Agent.files
-    sync_success = Agent.agent_sync(out_of_sync,files)
-    if not sync_success:
-        print("[ERROR] Attempt to synchronize Agent application on {} failed.".format(cluster_name))
-        abort(404)
-    else: #If successful, procede with restart 
-        if Agent.agent_restart(out_of_sync):
-            print("[SUCCESS] Attempt to restart Agent application on {} succeeded.".format(cluster_name))
-            return jsonify({"data":"okay"}) #success
-        else:
-            print("[ERROR] Restart on {} failed!".format(cluster_name))
-            return jsonify({"data":"not okay"}) #fail
+    if nodename:
+        Agent.file_load()
+        files:dict = Agent.files
+        
+        sync_success = Agent.agent_sync(nodename,files)
+        if not sync_success:
+            flash("[ERROR] Attempt to synchronize Agent application on {} failed.".format(nodename))
+            return jsonify({"data":"not okay"})
+        else: #If successful, procede with restart 
+            
+            restart_success = Agent.agent_restart(nodename)
+            if restart_success:
+                
+                flash("[SUCCESS] Attempt to restart Agent application on {} succeeded.".format(nodename))
+                return jsonify({"data":"okay"}) #success
+            else:
+                flash("[ERROR] Restart on {} failed!".format(nodename))
+                return jsonify({"data":"not okay"}) #fail

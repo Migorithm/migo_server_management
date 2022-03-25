@@ -1,4 +1,5 @@
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+import os
 
 from abc import ABC,abstractmethod
 class Interface(ABC):
@@ -11,7 +12,7 @@ class Interface(ABC):
     
     @staticmethod
     def token_generator() -> str:
-        serializer= Serializer("AGENT_KEY",300)
+        serializer= Serializer(os.getenv("AGENT_KEY"),300)
         return serializer.dumps({"confirm":True}).decode("utf-8")
     
     @staticmethod

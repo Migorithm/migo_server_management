@@ -14,6 +14,11 @@
 <div class="container" id="node_table" style="display:none"> 
    
 </div>
+
+<br><br>
+<div class="container" id="result_table" style="display:none"> 
+   
+</div>
 {% endblock %}
 
 
@@ -61,15 +66,15 @@ function show_node(cluster){
 
             input.setAttribute("class","form-check-input")
             input.setAttribute("type","checkbox")            
-            input.setAttribute("id",node)
             input.setAttribute("value",node)
             input.setAttribute("name","checkbox")
 
 
             label.setAttribute("class","form-check-label") 
             label.setAttribute("for",node)
+            label.setAttribute("id",node)
             
-
+            
             let div= document.createElement("div")
 
             if (status == 2){
@@ -114,14 +119,44 @@ function show_node(cluster){
 
 function sync(){
     let checkboxes = document.getElementsByName("checkbox")
-    let nodes=[]
+    //let nodes=[]
+    $target=$("#result_table")
+    $target.empty()
     for (let checkbox of checkboxes)
-            {
-                if (checkbox.checked) {
-                    nodes.push(checkbox.value);
-                }
+        {
+            if (checkbox.checked) {
+                //nodes.push(checkbox.value);
+                let node = checkbox.value
+                $.ajax({
+                    type: "POST",
+                    url: "/nodes_to_sync",
+                    headers:{"Content-Type":"application/json"},
+                    data: JSON.stringify({"node":node}),
+                    dataType: "json"
+                }).done(function(res){
+                    
+                    const div = document.createElement("div")
+                    div.setAttribute("role","alert")
+                    if (res['data']=="okay"){
+                        div.setAttribute("class","alert alert-success")
+                        div.innerHTML ="Success on "+node
+
+                        //Change checkbox back to disabled so you don't fiddle with that. 
+                        checkbox.disabled=true
+                        let label = document.getElementById(node)
+                        label.innerHTML = '<h6 style="color:#4f3a3a;">'+ node + '</h6><span class="badge badge-primary">In-Sync</span>'
+                    }
+                    else {
+                        div.setAttribute("class","alert alert-danger")
+                        div.innerHTML = "Failure on "+node
+                    }
+                    $target.append(div)
+                })
             }
+        }
+    $target.show()
     console.log(nodes) //pass this to backend server
+    
 
 }
 
