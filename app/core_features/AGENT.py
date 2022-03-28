@@ -31,9 +31,9 @@ class Agent:
         cls.files["token"] = Agent.token_generator()
         
     @staticmethod
-    def sync_status(node:str):
+    def sync_status(node:str,timeout=3):
         try:
-            res= requests.get(node+"/")
+            res= requests.get(node+"/",timeout=timeout)
             if res.ok:
                 if res.json().get("version") ==os.getenv("AGENT_VERSION"):
                     print("Version match")
@@ -76,14 +76,17 @@ class Agent:
             print("[ERROR] {}".format(str(e)))
             return False
         finally:
-            status_url = node +'/'
             cnt = 0 
             while cnt<10:
                 try : 
-                    res= requests.get(status_url,timeout=3)
-                    if res.ok:                   
+                    res= Agent.sync_status(node)
+                    if res[1] == 1:                   
                         print("[SUCCESS] Agent restart on {} completed successfully".format(node))
                         return True
+                    else:
+                        cnt+=1
+                        time.sleep(0.5)
+                        continue
                 except requests.exceptions.ConnectionError as e:
                     print("[WORK_IN_PROGRESS] Agent is booting up again on {}, give more time...".format(node))
                     time.sleep(0.5)

@@ -344,7 +344,7 @@ def nodes_to_sync():
             restart_success = Agent.agent_restart(nodename)
             if restart_success:
                 
-                flash("[SUCCESS] Attempt to restart Agent application on {} succeeded.".format(nodename))
+                flash("[SUCCESS] Attempt to restart Agent application succeeded.")
                 return jsonify({"data":"okay"}) #success
             else:
                 flash("[ERROR] Restart on {} failed!".format(nodename))
