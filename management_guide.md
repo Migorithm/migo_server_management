@@ -62,7 +62,7 @@ a.insert_execution()
 
 #### Adding User role 
 ```python
-role = Role
+role = Role()
 role.insert_roles()
 ```
 
@@ -70,4 +70,21 @@ role.insert_roles()
 .flaskenv
 ```
 AUTH_Cluster_name=Password
+```
+
+
+
+## Installation Procedure
+On terminal
+1. flask db init
+2. flask db migrate
+3. flask db upgrade
+4. flask shell
+
+```python
+a = Execution()
+a.insert_execution()
+
+role = Role()
+role.insert_roles()
 ```
