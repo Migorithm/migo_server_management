@@ -110,3 +110,17 @@ You can limit the hostname by configuring "DOMAIN" environment variable. In this
 If you put the correct domain name, they will send a confirmation mail to the given email. <br>
 
 
+### 6. Redistribution of Agent Server application
+Assuming you deploy this application in production servers where outbound network connectivity is not allowed, deploying the agent application will be tedious and error-prone.<br>
+
+To get around to it, this application provides version match check and if not matched, allows you to deploy the agent application again to specified servers.<br><br>
+<img src="./guideline_pics/agentSync.png"><br><br>
+<img src="./guideline_pics/agentSync2.png"><br><br>
+
+As you can see, if your agent servers(or cluster) are out of sync, you can simply click<br>
+"syncronize" button then it will result in the following:<br>
+<img src="./guideline_pics/agentSync3.png"><br><br>
+
+Note that IP and ports are blanked for the security reason. 
+
+
