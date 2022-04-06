@@ -1,5 +1,4 @@
 from collections.abc import MutableMapping
-from elasticsearch import Elasticsearch 
 import time 
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 import requests
@@ -29,35 +28,23 @@ class Es(Interface):
             ip,port = re.search(r"[0-9]{2,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}:[0-9]{4}",self.nodes[idx]).group().split(":")# (123.123.23.24,9200)
             self.nodes[idx] = (ip,int(port))
             
-        # if auth:
-        #     self.auth = auth.split(":")    
-       
-    
-    # def connector(self) -> Elasticsearch:
-    #     try :
-    #         es= Elasticsearch(self.nodes,
-    #                         sniff_on_node_failure=True,sniff_timeout=30,
-    #                         basic_auth=(self.auth[0],self.auth[1] if hasattr(self, "auth") else None),
-    #                         verify_certs=False #Same as "-k"
-    #                         )
-    #         return es
-    #     except AttributeError as e:
-    #         es= Elasticsearch(self.nodes,
-    #             sniff_on_node_failure=True,sniff_timeout=30,
-    #             verify_certs=False #Same as "-k"
-    #             ) 
-    #         return es
 
     def es_con(self,path='/_cluster/health',get="status") -> str:
         node = random.choice(self.nodes)
-        try :
-            with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as sock:
-                if self.https:
-                    sock = ssl.wrap_socket(sock,keyfile=None,certfile=None,server_side=False,cert_reqs=ssl.CERT_NONE,ssl_version=ssl.PROTOCOL_SSLv23)
-                sock.settimeout(3)
+        
+        with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as sock:
+            if self.https:
+                sock = ssl.wrap_socket(sock,keyfile=None,certfile=None,server_side=False,cert_reqs=ssl.CERT_NONE,ssl_version=ssl.PROTOCOL_SSLv23)
+            sock.settimeout(3)
+            try :
                 sock.connect(node)
+            except TimeoutError as t:
+                self.es_con(path=path,get=get)
+            except Exception as e:
+                return str(e)
 
-                #HTTP communication protocol
+            else:
+            #HTTP communication protocol
                 path = path
                 host = node[0]
                 token = base64.b64encode(self.auth.encode("ascii"))
@@ -69,14 +56,12 @@ class Es(Interface):
 
                 #sock.send
                 sock.send(("\r\n".join(lines) +"\r\n\r\n").encode())
-                print(("\r\n".join(lines) +"\r\n\r\n").encode())
                 response=sock.recv(4096).decode()
                 separator=response.index("{")
                 result = json.loads(response[separator:])
                 return result.get(get)
 
-        except Exception as e:
-            return str(e)
+    
 
     @staticmethod
     def token_generator() -> str:
