@@ -47,12 +47,18 @@ class Es(Interface):
             #HTTP communication protocol
                 path = path
                 host = node[0]
-                token = base64.b64encode(self.auth.encode("ascii"))
-                lines = [
+                if self.auth :
+                    token = base64.b64encode(self.auth.encode("ascii"))
+                    lines = [
                     'GET %s HTTP/1.1' % path,
                     'Host: %s' % host,
                     'Authorization: Basic %s' %token.decode()
-                ]
+                    ]
+                else :
+                    lines = [
+                    'GET %s HTTP/1.1' % path,
+                    'Host: %s' % host,
+                    ]
 
                 #sock.send
                 sock.send(("\r\n".join(lines) +"\r\n\r\n").encode())
