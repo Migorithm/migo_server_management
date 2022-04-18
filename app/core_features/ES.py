@@ -76,7 +76,7 @@ class Es(Interface):
     
     def RollingRestart(self):
         #es_con = self.connector()
-        for node in self.agents:
+        for ip,port in self.nodes: # ip:str,port:int 
             while True : 
                 try :
                     # if es_con.cluster.health()['status'] =="green":
@@ -84,13 +84,13 @@ class Es(Interface):
                         print("Cluster health green! Continue rolling restart...")
                         token = Es.token_generator()
                         
-                        res=requests.post(node+"/es/command/restart",json={"token":token})
+                        res=requests.post("http://"+ip+":5000/es/command/restart",json={"token":token,"port":str(port)})
                         if res.status_code == 200:
-                            print(f"[SUCCESS] Agent : {node} executed Restart...")
+                            print(f"[SUCCESS] Agent : {ip} executed Restart...")
                             time.sleep(10) 
                             #es_con = self.connector() # recall 
                         else:
-                            print(f"[ERROR] Agent : {node} restart failed...")
+                            print(f"[ERROR] Agent : {ip} restart failed...")
                 except Exception as e:
                     print(f"[ERROR]! {e}")
                     print(e.args)
@@ -101,7 +101,7 @@ class Es(Interface):
                     while self.es_con() != "green":
                         print("Cluster health not green! give it a little sec")
                         print(f"Tried {cnt} times...")
-                        print(f"The most recent execution was on {node}")
+                        print(f"The most recent execution was on {ip}")
                         time.sleep(10)
                         cnt+=1
                         continue
