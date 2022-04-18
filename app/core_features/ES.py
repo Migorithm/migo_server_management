@@ -131,7 +131,6 @@ class Es(Interface):
                 
         except Exception as e:
             print("error from exception")
-            
             return e
     
     
@@ -139,18 +138,18 @@ class Es(Interface):
         token = Es.token_generator()
         #Connect, and send this newly gotten dict
         error_reports=[]
-        for node in self.agents:
+        for ip,port in self.nodes:
             try:        
                 print(token)
-                res=requests.post(node+"/es/command/configuration",json={"token":token,"data":dic})
+                res=requests.post("http://"+ip+":5000/es/command/configuration",json={"token":token,"data":dic,"port":str(port)})
                 if res.status_code == 200:
-                    message= f"[SUCCESS] Agent '{node}' Set Config file..."
+                    message= f"[SUCCESS] Agent '{ip}' Set Config file..."
                     print(message)  
                 else:
-                    message = f"[ERROR] Sent a post request but agent '{node}' failed to set config file"
+                    message = f"[ERROR] Sent a post request but agent '{ip}' failed to set config file"
                     error_reports.append(message)
             except Exception as e:
-                message =f"[Error] Post request to '{node}' failed !"
+                message =f"[Error] Post request to '{ip}' failed !"
                 print(message)
                 error_reports.append(message)
         if not error_reports:
